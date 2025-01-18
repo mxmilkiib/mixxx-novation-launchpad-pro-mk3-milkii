@@ -66,7 +66,6 @@ LaunchpadProMK3.mainpadLayout = "3124";
 //LaunchpadProMK3.mainpadLayout = "4321";
 //LaunchpadProMK3.mainpadLayout = "4213";
 
- parseInt(number / 10);
 // MIDI addresses of the left/right side pads
 LaunchpadProMK3.sidepadAddresses = [
   80, 70, 89, 79,
@@ -778,7 +777,7 @@ LaunchpadProMK3.loopControls = [
   "_16_activate",
   "_32_activate",
   "_64_activate",
-  "_128_activate",
+  "_128_activate"
 ];
 
 // Update fourth page
@@ -1001,7 +1000,7 @@ LaunchpadProMK3.darkenRGBColour = function(rgb, ratio) {
 // Turn off pad LEDs
 LaunchpadProMK3.turnOffPad = function(pad, rgb) {
   //LaunchpadProMK3.sendRGB(pad, 0, 0, 0)
-  if (rgb === undefined) rgb = [ 0, 0, 0 ];;
+  if (rgb === undefined) rgb = [ 0, 0, 0 ];
   LaunchpadProMK3.sendRGB(pad, rgb[0], rgb[1], rgb[2]);
 };
 
@@ -1094,13 +1093,13 @@ LaunchpadProMK3.onTrackLoadedOrUnloaded = function(value, group) {
     LaunchpadProMK3.updateHotcueLights(deck);
     //LaunchpadProMK3.updateHotcuePage();
   } else if (LaunchpadProMK3.currentPage === 1) {
-    LaunchpadProMK3.updateBeatjumpPage;
+    LaunchpadProMK3.updateBeatjumpPage();
   } else if (LaunchpadProMK3.currentPage === 2) {
-    LaunchpadProMK3.updateExtrasPage;
+    LaunchpadProMK3.updateExtrasPage();
   } else if (LaunchpadProMK3.currentPage === 3) {
-    LaunchpadProMK3.updateLoopPage;
+    LaunchpadProMK3.updateLoopPage();
   } else if (LaunchpadProMK3.currentDeck === 4) {
-    LaunchpadProMK3.updateReverseLoopPage;
+    LaunchpadProMK3.updateReverseLoopPage();
   }
 }
 
