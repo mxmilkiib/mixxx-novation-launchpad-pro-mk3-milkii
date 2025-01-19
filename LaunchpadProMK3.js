@@ -768,10 +768,10 @@ LaunchpadProMK3.updateBpmScalePage = function() {
       if (nowBpm !== 0) {
         for (let i = 1; i <= Object.keys(LaunchpadProMK3.bpmScaleLayout).length; i++) {
           bpmScaledFlashes[deckIndex].push(nowBpm * LaunchpadProMK3.bpmScaleLayout[i][0]);
+          bpmScaledFlashTimes[deckIndex].push(60000 / bpmScaledFlashes[deckIndex][i]);
           DEBUG("ratio: " + LaunchpadProMK3.bpmScaleLayout[i][0]);
           DEBUG(i + "    " + "bpmScaledFlashes " + bpmScaledFlashes[deckIndex])
           DEBUG(bpmScaledFlashes[deckIndex][i])
-          bpmScaledFlashTimes[deckIndex].push(60000 / bpmScaledFlashes[deckIndex][i]);
         }
       }
       DEBUG("BPMSCALEDFLAAAAASH " + JSON.stringify(bpmScaledFlashes), C.M)
@@ -796,9 +796,13 @@ LaunchpadProMK3.updateBpmScalePage = function() {
       LaunchpadProMK3.sendHEX(next4Address, deckColour); // Set the color for current deck LED
       DEBUG("extras side colour deck " + deckIndex + "  nextAddress " + nextAddress, C.O, 0, 2);
 
-      for (let i = 1; i <= Object.keys(bpmScaledFlashTimes).length; i++) {
-        DEBUG(bpmScaledFlashTimes[i])
-        LaunchpadProMK3.timer[i] = engine.beginTimer(bpmScaledFlashTimes[deckIndex][i],LaunchpadProMK3.tempoScaleDeckFlash(i, deckIndex, control));
+      for (let i = 1; i < bpmScaledFlashTimes[deckIndex].length; i++) {
+        DEBUG("Setting timer for deckIndex " + deckIndex + " i " + i);
+        DEBUG(bpmScaledFlashTimes[i]);
+        DEBUG(bpmScaledFlashTimes[deckIndex][i]);
+        LaunchpadProMK3.timer[i] = engine.beginTimer(bpmScaledFlashTimes[deckIndex][i], function() {
+          LaunchpadProMK3.tempoScaleDeckFlash(i, deckIndex, control);
+        });
       }
       engine.makeConnection("[Channel" + deckIndex + "]", "beat_active", LaunchpadProMK3.tempoScaleDeckFlash )
     }
@@ -815,15 +819,17 @@ LaunchpadProMK3.updateBpmScalePage = function() {
   };
 }
 
-LaunchpadProMK3.tempoScaleDeckFlash = function(value, group, control) {
+LaunchpadProMK3.tempoScaleDeckFlash = function(i, deckIndex, control) {
   //let targetPad = padPoss * 20;
   //d = script.deckFromGroup(deck)
   DEBUG("tsdf control " +  control)
-  DEBUG("tsdf group " + group)
-  let targetPad = 80-(group * 20);
+  DEBUG("tsdf deckIndex " + deckIndex)
+  let targetPad = 80-(deckIndex * 20);
   //DEBUG(targetPad)
-  if (value) { LaunchpadProMK3.sendRGB(targetPad, 127, 127, 127) }
-  if (!value) { LaunchpadProMK3.sendRGB(targetPad, 0, 0, 0) }
+    if (engine.getValue(`[Channel${deckIndex}]`, control)) {
+      if (value) { LaunchpadProMK3.sendRGB(targetPad, 127, 127, 127) }
+      if (!value) { LaunchpadProMK3.sendRGB(targetPad, 0, 0, 0) }
+    }
 }
 
 LaunchpadProMK3.loopControls = [
@@ -850,6 +856,12 @@ LaunchpadProMK3.loopControls = [
   "_64_activate",
   "_128_activate"
 ];
+
+LaunchpadProMK3.stopTimers = function() {
+  for (timer in LaunchpadProMK3.timer) {
+
+  }
+}
 
 // Update fourth page
 LaunchpadProMK3.updateLoopPage = function() {
