@@ -796,17 +796,20 @@ LaunchpadProMK3.updateBpmScalePage = function() {
       LaunchpadProMK3.sendHEX(next4Address, deckColour); // Set the color for current deck LED
       DEBUG("extras side colour deck " + deckIndex + "  nextAddress " + nextAddress, C.O, 0, 2);
 
-      for (let i = 1; i < bpmScaledFlashTimes[deckIndex].length; i++) {
-        DEBUG("Setting timer for deckIndex " + deckIndex + "    i " + i);
-        DEBUG(bpmScaledFlashTimes[deckIndex]);
-        DEBUG(bpmScaledFlashTimes[deckIndex][i]);
-        LaunchpadProMK3.timer[deckIndex][i].push(engine.beginTimer(bpmScaledFlashTimes[deckIndex][i], function() {
-          LaunchpadProMK3.tempoScaleDeckFlash(i, deckIndex, control);
-        }));
+      LaunchpadProMK3.timer = [];
+
+      for (let deckIndex = 1; deckIndex <= deckOrder.length; deckIndex++) {
+        for (let i = 1; i < bpmScaledFlashTimes[deckIndex].length; i++) {
+          DEBUG("Setting timer for deckIndex " + deckIndex + "    i " + i);
+          DEBUG(bpmScaledFlashTimes[deckIndex]);
+          DEBUG(bpmScaledFlashTimes[deckIndex][i]);
+          LaunchpadProMK3.timer[deckIndex][i] = engine.beginTimer(bpmScaledFlashTimes[deckIndex][i], function() {
+            LaunchpadProMK3.tempoScaleDeckFlash(i, deckIndex, control);
+          });
+        }
       }
       engine.makeConnection("[Channel" + deckIndex + "]", "beat_active", LaunchpadProMK3.tempoScaleDeckFlash )
     }
-
 
     //for (let deck of deckOrder) {
     //  let currentDeck = deckOrder[deck]
