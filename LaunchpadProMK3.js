@@ -797,12 +797,12 @@ LaunchpadProMK3.updateBpmScalePage = function() {
       DEBUG("extras side colour deck " + deckIndex + "  nextAddress " + nextAddress, C.O, 0, 2);
 
       for (let i = 1; i < bpmScaledFlashTimes[deckIndex].length; i++) {
-        DEBUG("Setting timer for deckIndex " + deckIndex + " i " + i);
-        DEBUG(bpmScaledFlashTimes[i]);
+        DEBUG("Setting timer for deckIndex " + deckIndex + "    i " + i);
+        DEBUG(bpmScaledFlashTimes[deckIndex]);
         DEBUG(bpmScaledFlashTimes[deckIndex][i]);
-        LaunchpadProMK3.timer[i] = engine.beginTimer(bpmScaledFlashTimes[deckIndex][i], function() {
+        LaunchpadProMK3.timer[deckIndex][i].push(engine.beginTimer(bpmScaledFlashTimes[deckIndex][i], function() {
           LaunchpadProMK3.tempoScaleDeckFlash(i, deckIndex, control);
-        });
+        }));
       }
       engine.makeConnection("[Channel" + deckIndex + "]", "beat_active", LaunchpadProMK3.tempoScaleDeckFlash )
     }
@@ -822,11 +822,10 @@ LaunchpadProMK3.updateBpmScalePage = function() {
 LaunchpadProMK3.tempoScaleDeckFlash = function(i, deckIndex, control) {
   //let targetPad = padPoss * 20;
   //d = script.deckFromGroup(deck)
-  DEBUG("tsdf control " +  control)
-  DEBUG("tsdf deckIndex " + deckIndex)
-  let targetPad = 80-(deckIndex * 20);
+  DEBUG("tsdf control " +  control + "    deckIndex " + deckIndex)
+  let targetPad = 80 - (deckIndex * 20);
   //DEBUG(targetPad)
-    if (engine.getValue(`[Channel${deckIndex}]`, control)) {
+    if (engine.getValue("[Channel" + deckIndex + "]", control)) {
       if (value) { LaunchpadProMK3.sendRGB(targetPad, 127, 127, 127) }
       if (!value) { LaunchpadProMK3.sendRGB(targetPad, 0, 0, 0) }
     }
