@@ -9,8 +9,8 @@ const COLOURS = {
   ORANGE: "\x1b[33m",
   BLUE: "\x1b[34m",
   YELLOW: "\x1b[35m",
-  //MAGENTA : "\x1b[35m",
-  //CYAN : "\x1b[36m",
+  MAGENTA : "\x1b[35m",
+  CYAN : "\x1b[36m",
   RESET: "\x1b[0m"
 };
 
@@ -21,8 +21,8 @@ const C = {
   O: COLOURS.ORANGE,
   B: COLOURS.BLUE,
   Y: COLOURS.YELLOW,
-  //M: COLOURS.MAGENTA,
-  //C: COLOURS.CYAN,
+  M: COLOURS.MAGENTA,
+  C: COLOURS.CYAN,
   RE: COLOURS.RESET
 };
 
@@ -89,15 +89,35 @@ LaunchpadProMK3.switchDecksButtons = [
   [ 0x68, 0x44, 0x60, 0x0D ] ];
 
 
-LaunchpadProMK3.extrasLayout = {
-  "1": [ "beats_undo_adjustment", 0x331111 ],
-  "2": [ "beats_set_halve", 0x111111 ],
-  "3": [ "beats_set_twothirds", 0x343434],
-  "4": [ "beats_set_threefourths", 0x6a6a6a ],
-  "5": [ "beats_set_fourthirds", 0x6a6a6a ],
-  "6": [ "beats_set_threehalves", 0x343434 ],
-  "7": [ "beats_set_double", 0x111111 ],
-  "8": [ "stars_up", 0x333311 ] };
+  //"1": [ "beats_undo_adjustment", 0x331111 ],
+  //"2": [ "beats_set_halve", 0x111111 ],
+  //"3": [ "beats_set_twothirds", 0x343434],
+  //"4": [ "beats_set_threefourths", 0x6a6a6a ],
+  //"5": [ "beats_set_fourthirds", 0x6a6a6a ],
+  //"6": [ "beats_set_threehalves", 0x343434 ],
+  //"7": [ "beats_set_double", 0x111111 ],
+  //"8": [ "stars_up", 0x333311 ] };
+
+LaunchpadProMK3.bpmScaleLayout = {
+  "1": [ 0.5, "beats_set_halve", 0x111111 ],
+  "2": [ 0.666, "beats_set_twothirds", 0x343434],
+  "3": [ 0.75, "beats_set_threefourths", 0x6a6a6a ],
+  "4": [ 1, "noop", 0x331111 ],
+  "5": [ 1, "noop", 0x331111 ],
+  "6": [ 1.25, "beats_set_fourthirds", 0x6a6a6a ],
+  "7": [ 1.333, "beats_set_threehalves", 0x343434 ],
+  "8": [ 1.5, "beats_set_double", 0x111111 ] },
+
+LaunchpadProMK3.bpmScaleRatios = [
+  0.5,
+  0.666,
+  0.75,
+  1,
+  1,
+  1.25,
+  1.333,
+  1.5
+];
 
 LaunchpadProMK3.beatjumpBaseButtons = [ 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D ];
 
@@ -332,13 +352,13 @@ LaunchpadProMK3.Deck = function (deckNumber) {
     let hotcueNum = i;
 
     DEBUG("i " + C.O + i + C.RE + ",   padAddress " + C.O + padAddress + C.RE + "/" +C.O+ "0x" + padAddress.toString(16).padStart(2, "0").toUpperCase());
-    DEBUG(this.deckColour)
-    DEBUG(LaunchpadProMK3.hexToRGB(this.deckColour))
-    deckLoaded = engine.getValue(`${this.currentDeck}`, "track_loaded")
-    DEBUG(deckLoaded)
+    DEBUG(this.deckColour);
+    DEBUG(LaunchpadProMK3.hexToRGB(this.deckColour));
+    deckLoaded = engine.getValue(`${this.currentDeck}`, "track_loaded");
+    DEBUG(deckLoaded);
     if (deckLoaded !== 1) { this.deckColourBg = LaunchpadProMK3.darkenRGBColour(LaunchpadProMK3.hexToRGB(this.deckColour),0.03); }
     if (deckLoaded === 1) { this.deckColourBg = LaunchpadProMK3.darkenRGBColour(LaunchpadProMK3.hexToRGB(this.deckColour),0.22); }
-    DEBUG(this.deckColourBg)
+    DEBUG(this.deckColourBg);
     LaunchpadProMK3.sendRGB(padAddress, this.deckColourBg[0], this.deckColourBg[1], this.deckColourBg[2]);
 
     // Create hotcue button, using ComponentsJS objects/methods
@@ -388,15 +408,22 @@ LaunchpadProMK3.Deck = function (deckNumber) {
         };
         //1
         if (LaunchpadProMK3.currentPage === 1) {
-          let beatjumpControlSel = LaunchpadProMK3.beatjumpControls[hotcueNum-1]
-          script.triggerControl(this.currentDeck, beatjumpControlSel, 50);
-          DEBUG("beatjump " + C.O + beatjumpControlSel + C.RE + " on deck " + this.currentDeck,C.G, 1)
+          if (value !== 0) {
+            let beatjumpControlSel = LaunchpadProMK3.beatjumpControls[hotcueNum-1]
+            script.triggerControl(this.currentDeck, beatjumpControlSel, 50);
+            DEBUG("BEATJUMP " + C.O + beatjumpControlSel + C.RE + " on deck " + this.currentDeck,C.G, 1)
+          }
         };
         //2
         if (LaunchpadProMK3.currentPage === 2) {
-          let extraControlSel = LaunchpadProMK3.extrasLayout[hotcueNum % 10][0]
-          script.triggerControl(this.currentDeck, extraControlSel, 50);
-          DEBUG("extras " + C.O + extraControlSel + C.RE + " on deck " + this.currentDeck,C.G, 1)
+          if (value !== 0) {
+            if (engine.getValue(this.currentDeck, "track_loaded") === 1) {
+              let bpmControlSel = LaunchpadProMK3.bpmScaleLayout[padAddress % 10][0]
+              if (parseInt(padAddress/10) % 2 !== 0) bpmControlSel = "stars_down";
+              script.triggerControl(this.currentDeck, bpmControlSel, 50);
+              DEBUG("bpmCALE " + C.O + bpmControlSel + C.RE + " on deck " + this.currentDeck,C.G, 1)
+            }
+          }
         };
         //3
         if (LaunchpadProMK3.currentPage === 3) {
@@ -405,7 +432,7 @@ LaunchpadProMK3.Deck = function (deckNumber) {
             if (address > 31 && address < 48) { padPoss = 3 }
             if (address > 51 && address < 68) { padPoss = 2 }
             if (address > 71 && address < 88) { padPoss = 1 }
-            deck = LaunchpadProMK3.mainpadLayout[padPoss-1]
+            deck = LaunchpadProMK3.mainpadLayout[padPoss-1];
             channel = "[Channel" + deck + "]";
             const firstDigit = parseInt(address / 10);
             const lastDigit = address % 10;
@@ -421,44 +448,44 @@ LaunchpadProMK3.Deck = function (deckNumber) {
           };
         };
       }),
-    }),
 
-    sendRGB: function(color_obj) {
-      //DEBUG("currentPage: " + LaunchpadProMK3.currentPage)
-      //DEBUG(color_obj.toString())
-      deckLoaded = engine.getValue(`[Channel${deckNumber}]`, "track_loaded")
-      //DEBUG(deckColour)
-      //let rgb = LaunchpadProMK3.hexToRGB(deckColour);
-      //DEBUG(rgb)
-      if (deckLoaded !== 1) { rgb = LaunchpadProMK3.darkenRGBColour(rgb,0.12) }
-      if (LaunchpadProMK3.currentPage === 0) {
-        LaunchpadProMK3.sendRGB(this.padAddress, color_obj.red>>1,color_obj.green>>1,color_obj.blue>>1);
-        DEBUG("sendRGB: deckNumber " + C.O + deckNumber + C.RE + "/" + C.O + this.currentDeck + C.RE + ",  i " + C.O + i + C.RE + ",  padAddress " + C.O + padAddress + C.RE + "/" + C.O + "0x" + padAddress.toString(16).padStart(2, "0").toUpperCase() + C.RE + "   hotcueNum " + C.O + hotcueNum);
-      }
-    }
+      sendRGB: function (color_obj) {
+        //DEBUG("currentPage: " + LaunchpadProMK3.currentPage)
+        //DEBUG(color_obj.toString())
+        let deckLoaded = engine.getValue(`[Channel${deckNumber}]`, "track_loaded");
+        //DEBUG(deckColour)
+        //let rgb = LaunchpadProMK3.hexToRGB(deckColour);
+        //DEBUG(rgb)
+        if (deckLoaded !== 1) { rgb = LaunchpadProMK3.darkenRGBColour(rgb, 0.12) }
+        if (LaunchpadProMK3.currentPage === 0) {
+          LaunchpadProMK3.sendRGB(this.padAddress, color_obj.red>>1,color_obj.green>>1,color_obj.blue>>1);
+          DEBUG("sendRGB: deckNumber " + C.O + deckNumber + C.RE + "/" + C.O + this.currentDeck + C.RE + ",  i " + C.O + i + C.RE + ",  padAddress " + C.O + padAddress + C.RE + "/" + C.O + "0x" + padAddress.toString(16).padStart(2, "0").toUpperCase() + C.RE + "   hotcueNum " + C.O + hotcueNum);
+        }
+      },
+    });
 
     //shutdown: undefined
     engine.makeConnection(`[Channel${deckNumber}]`, `hotcue_${hotcueNum}_status`, (value) => {
       let deckColour = this.deckColour // Get the deck color
-      DEBUG(deckColour)
-      let deckColourBg = LaunchpadProMK3.darkenRGBColour(deckColour,0.1)
-
-      DEBUG(deckColourBg)
-      if (LaunchpadProMK3.currentPage === 0) {
-        LaunchpadProMK3.turnOffPad(padAddress, LaunchpadProMK3.hexToRGB(deckColourBg));
-      }
-    });
-    engine.makeConnection(`[Channel${deckNumber}]`, `hotcue_${hotcueNum}_clear`, (value) => {
-      let deckColour = this.deckColour // Get the deck color
-      let deckColourBg = LaunchpadProMK3.darkenRGBColour(deckColour,0.1)
+      DEBUG("hotcue status ; deckColour " + deckColour);
+      let deckColourBg = LaunchpadProMK3.darkenRGBColour(LaunchpadProMK3.hexToRGB(deckColour),0.1);
+      DEBUG("hotcue status ; deckColourBg " + deckColourBg);
       if (LaunchpadProMK3.currentPage === 0) {
         LaunchpadProMK3.turnOffPad(padAddress, deckColourBg);
       }
-    });
-
+    }),
+      engine.makeConnection(`[Channel${deckNumber}]`, `hotcue_${hotcueNum}_clear`, (value) => {
+        if (value === 0) return
+        let deckColour = this.deckColour; // Get the deck color
+        let deckColourBg = LaunchpadProMK3.darkenRGBColour(deckColour,0.1);
+        DEBUG("Hotcue CLEAR    deckColour " + deckColour + "   deckColourBg " + deckColourBg )
+        if (LaunchpadProMK3.currentPage === 0) {
+          LaunchpadProMK3.turnOffPad(padAddress, LaunchpadProMK3.hexToRGB(deckColourBg));
+        };
+      })
   }
-  DEBUG("# ending mainpads init", C.R);
 
+  DEBUG("# ending mainpads init", C.R);
   //// deck Sidepad Intro/Outro Hotcues
   //DEBUG("## deck sidepads instantiation:  deckNumber " + deckNumber, C.G, 1);
   DEBUG("# sidepad button init:", C.G, 1);
@@ -483,17 +510,17 @@ LaunchpadProMK3.Deck = function (deckNumber) {
             LaunchpadProMK3.lastHotcue.unshift( [ deckNumber, sidepadControlName, padAddress, deckNumber ] );
           } else {
             script.triggerControl(`[Channel${deckNumber}]`, `${sidepadControlName}clear`, 50);
-          }
-        }
-      })
+          };
+        };
+      }),
 
     });
     engine.makeConnection(`[Channel${deckNumber}]`, `${sidepadControlName}enabled`, (value) => {
       if (LaunchpadProMK3.currentPage === 0) {
         LaunchpadProMK3.trackWithInOut(value, deckNumber, padAddress);
-      }
+      };
     });
-  }
+  };
   DEBUG("# ending sidepads init", C.R);
 
   DEBUG("# reconnect to group:", C.G, 1);
@@ -559,10 +586,10 @@ LaunchpadProMK3.updateHotcueLights = function(deck) {
         // if deck unloaded, dim deck colour
         DEBUG(`deckColour: ${deckColour}`)
         let rgb = LaunchpadProMK3.hexToRGB(deckColour);
-        DEBUG(rgb);
+        DEBUG(" rgb1 " + rgb);
         if (deckLoaded === 1) { rgb = LaunchpadProMK3.darkenRGBColour(rgb,0.12) }
         if (deckLoaded !== 1) { rgb = LaunchpadProMK3.darkenRGBColour(rgb,0.02) }
-        DEBUG(rgb);
+        DEBUG(" rgb2 " + rgb);
         //let rgb = LaunchpadProMK3.hexToRGB(deckColour);
         //let rgb = LaunchpadProMK3.darkenRGBColour(deckColour,1);
         colourSpecMulti = colourSpecMulti.concat([ 0x03, padAddress, rgb[0], rgb[1], rgb[2] ]);
@@ -677,29 +704,32 @@ LaunchpadProMK3.updateBeatjumpPage = function() {
 
 
 LaunchpadProMK3.extrasDeckLed = [
-  "80", "70", "60", "50", "40", "30", "20", "10";
-]
+  "80", "70", "60", "50", "40", "30", "20", "10"
+];
 
 // Update third page
-LaunchpadProMK3.updateExtrasPage = function() {
+LaunchpadProMK3.updateBpmScalePage = function() {
   if (LaunchpadProMK3.currentPage === 2) {
-    DEBUG("## updateExtrasPage", C.G, 2, 1);
+    DEBUG("## updateBpmScalePage", C.G, 2, 1);
     LaunchpadProMK3.clearMain();
     let loaded = [];
     for (let d = 1; d <= 4; d+=1) {
       loaded[d] = engine.getValue(`[Channel${d}]`, "track_loaded")
-      DEBUG("getting... d " + d + "   loaded: " + loaded[d], C.G, 1, 1);
+      DEBUG("getting... d " + d + "   loaded: " + loaded[d], C.G, 0, 1);
     }
     LaunchpadProMK3.mainpadAddresses.forEach(address => {
-      if (address > 11 && address < 28) { let padPoss = 4 }
-      if (address > 31 && address < 48) { let padPoss = 3 }
-      if (address > 51 && address < 68) { let padPoss = 2 }
-      if (address > 71 && address < 88) { let padPoss = 1 }
-      let deck = LaunchpadProMK3.mainpadLayout[padPoss-1]
+      padPoss = ""
+      DEBUG("forEach mainpadAddresses padPoss address " + address)
+      if (address > 11 && address < 28) { padPoss = 4 }
+      if (address > 31 && address < 48) { padPoss = 3 }
+      if (address > 51 && address < 68) { padPoss = 2 }
+      if (address > 71 && address < 88) { padPoss = 1 }
+      DEBUG("padPoss " + padPoss)
+      deck = LaunchpadProMK3.mainpadLayout[padPoss-1]
       const lastDigit = address % 10;
-      if (LaunchpadProMK3.extrasLayout[lastDigit]) {
-        let control = LaunchpadProMK3.extrasLayout[lastDigit][0];
-        let colour = LaunchpadProMK3.extrasLayout[lastDigit][1];
+      if (LaunchpadProMK3.bpmScaleLayout[lastDigit]) {
+        let control = LaunchpadProMK3.bpmScaleLayout[lastDigit][1];
+        colour = LaunchpadProMK3.bpmScaleLayout[lastDigit][2];
         midi.makeInputHandler(0xB0, address, (channel, control, value, status, group) => {
           //if (LaunchpadProMK3.currentPage === 2 && value > 1) {
           if (value > 1) {
@@ -707,23 +737,43 @@ LaunchpadProMK3.updateExtrasPage = function() {
             script.toggleControl(channel,control, 50);
           };
         });
+        DEBUG("deck " + deck);
+        DEBUG("loaded[deck] " + loaded[deck]);
+        colour = LaunchpadProMK3.hexToRGB(colour);
+        DEBUG("colour " + colour);
+        if (loaded[deck] === 0) {
+          colour = LaunchpadProMK3.darkenRGBColour(colour,0.1);
+        }
+        DEBUG("   colour " + colour)
       } else {
         console.log(`No function for ending in ${lastDigit}, address: ${address}`);
       }
-      DEBUG(deck);
-      DEBUG(loaded[deck]);
-      colour = LaunchpadProMK3.hexToRGB(colour);
-      DEBUG(colour);
-      if (loaded[deck] === 0) {
-        colour = LaunchpadProMK3.darkenRGBColour(colour,0.1);
-      }
-      DEBUG(colour)
       LaunchpadProMK3.sendRGB(address, colour[0], colour[1], colour[2]);
     });
+
     let deckOrder = LaunchpadProMK3.mainpadLayout;
     DEBUG(deckOrder, C.G, 2);
     const deckAddresses = LaunchpadProMK3.sidepadAddresses.slice();
-    for (let deckIndex = 0; deckIndex < deckOrder.length; deckIndex++) {
+
+    DEBUG(JSON.stringify(LaunchpadProMK3.bpmScaleLayout))
+
+    bpmScaledFlashes = {}
+
+    for (let deckIndex = 1; deckIndex <= deckOrder.length; deckIndex++) {
+
+      let nowBpm = engine.getValue("[Channel" + deckIndex + "]", "bpm")
+      DEBUG("deckIndex " + deckIndex + "   nowBpm " + nowBpm)
+      bpmScaledFlashes[deckIndex][0] = nowBpm;
+
+      if (bpmScaledFlashes[deckIndex][0] !== 0) {
+        for (let i = 1; i < LaunchpadProMK3.bpmScaleLayout.length; i++) {
+          bpmScaledFlashes[deckIndex][i] = nowBpm * LaunchpadProMK3.bpmScaleLayout[i][1]
+          DEBUG("ratio: " + LaunchpadProMK3.bpmScaleLayout[i][1])
+          DEBUG(i + "    " + "bpmScaledFlashes " + bpmScaledFlashes)
+        }
+      }
+      DEBUG("BPMSCALEDFLAAAAASH " + JSON.stringify(bpmScaledFlashes), C.M)
+
       DEBUG(deckIndex);
       DEBUG(LaunchpadProMK3.sidepadAddresses, C.O);
       DEBUG(deckAddresses, C.O, 1);
@@ -741,8 +791,12 @@ LaunchpadProMK3.updateExtrasPage = function() {
       let next4Address = deckAddresses.shift();
       DEBUG(next4Address, C.G);
       LaunchpadProMK3.sendHEX(next4Address, deckColour); // Set the color for current deck LED
-      DEBUG("extras side colour deck " + currentDeck + "  nextAddress " + nextAddress, C.O, 0, 2);
+      DEBUG("extras side colour deck " + deckIndex + "  nextAddress " + nextAddress, C.O, 0, 2);
+
+      engine.makeConnection("[Channel" + deckIndex + "]", "beat_active", LaunchpadProMK3.tempoScaleDeckFlash )
     }
+
+
     //for (let deck of deckOrder) {
     //  let currentDeck = deckOrder[deck]
     //  let deckColour = LaunchpadProMK3.deckColours[currentDeck-1];
@@ -754,6 +808,16 @@ LaunchpadProMK3.updateExtrasPage = function() {
   };
 }
 
+LaunchpadProMK3.tempoScaleDeckFlash = function(value, group, control) {
+  //let targetPad = padPoss * 20;
+  //d = script.deckFromGroup(deck)
+  //DEBUG(deck)
+  //DEBUG(d)
+  let targetPad = 80-(deck * 20);
+  //DEBUG(targetPad)
+  if (value) { LaunchpadProMK3.sendRGB(targetPad, 127, 127, 127) }
+  if (!value) { LaunchpadProMK3.sendRGB(targetPad, 0, 0, 0) }
+}
 
 LaunchpadProMK3.loopControls = [
   //"beatloop_activate",
@@ -1062,7 +1126,7 @@ LaunchpadProMK3.selectPage = function(page) {
   LaunchpadProMK3.currentPage = page;
   if (page === 0) { LaunchpadProMK3.updateHotcuePage(); }
   else if (page === 1) { LaunchpadProMK3.updateBeatjumpPage(); }
-  else if (page === 2) { LaunchpadProMK3.updateExtrasPage(); }
+  else if (page === 2) { LaunchpadProMK3.updateBpmScalePage(); }
   else if (page === 3) { LaunchpadProMK3.updateLoopPage(); }
   else if (page === 4) { LaunchpadProMK3.updateReverseLoopPage(); }
 
@@ -1095,7 +1159,7 @@ LaunchpadProMK3.onTrackLoadedOrUnloaded = function(value, group) {
   } else if (LaunchpadProMK3.currentPage === 1) {
     LaunchpadProMK3.updateBeatjumpPage();
   } else if (LaunchpadProMK3.currentPage === 2) {
-    LaunchpadProMK3.updateExtrasPage();
+    LaunchpadProMK3.updateBpmScalePage();
   } else if (LaunchpadProMK3.currentPage === 3) {
     LaunchpadProMK3.updateLoopPage();
   } else if (LaunchpadProMK3.currentDeck === 4) {
@@ -1209,6 +1273,11 @@ LaunchpadProMK3.create4LeadupDropHotcues = function (deck, value) {
   DEBUG(`# create hotcues:  ${C.Y} -128 -64 -32 -16 ${C.R}drop ${C.RE}on ${C.O}${deck},   value  ${value}`, C.G, 2);
   if (value === 0 || value === undefined) return 0;
   group = `[Channel${deck}]`;
+  hotcueCheck = [];
+  for (let h = 1; h<=20; h++) {
+    hotcueCheck[h] = engine.getValue(group, "hotcue_" + h + "_position" )
+  }
+  DEBUG(hotcueCheck)
   for (let X = 1; X <= 19; X++) {
     DEBUG(X)
     let hotcueVariable = "hotcue_" + X + "_status";
@@ -1217,36 +1286,56 @@ LaunchpadProMK3.create4LeadupDropHotcues = function (deck, value) {
       // Create -128, teal, 1
       engine.setValue(group, "beatjump_128_backward", 1);
       LaunchpadProMK3.sleep(50);
-      engine.setValue(group,"hotcue_"+X+"_set", 1);
-      engine.setValue(group,"hotcue_"+X+"_color", 0x1DBEBD); // teal
-      padAddress = LaunchpadProMK3.decks[deck].hotcueButtons[X].padAddress;
-      LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + X, padAddress, deck ] );
-      DEBUG("LaunchpadProMK3.lastHotcue:  " + C.O + LaunchpadProMK3.lastHotcue);
+      DEBUG(engine.getValue(group,"playposition"))
+      DEBUG(hotcueCheck)
+      if (hotcueCheck.includes(engine.getValue(group,"playposition")) !== true ) {
+        engine.setValue(group,"hotcue_"+X+"_set", 1);
+        engine.setValue(group,"hotcue_"+X+"_color", 0x1DBEBD); // teal
+        padAddress = LaunchpadProMK3.decks[deck].hotcueButtons[X].padAddress;
+        LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + X, padAddress, deck ] );
+        DEBUG("LaunchpadProMK3.lastHotcue:  " + C.O + LaunchpadProMK3.lastHotcue);
+      }
       // Create -64, green, 2
       engine.setValue(group, "beatjump_64_forward", 1);
       LaunchpadProMK3.sleep(50);
-      engine.setValue(group,"hotcue_"+(X+1)+"_set", 1);
-      engine.setValue(group,"hotcue_"+(X+1)+"_color", 0x8DC63F); // green
-      LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + (X+1), padAddress+1, deck ] );
+      DEBUG(hotcueCheck)
+      DEBUG(engine.getValue(group,"playposition"))
+      if (hotcueCheck.includes(engine.getValue(group,"playposition")) !== true ) {
+        engine.setValue(group,"hotcue_"+(X+1)+"_set", 1);
+        engine.setValue(group,"hotcue_"+(X+1)+"_color", 0x8DC63F); // green
+        LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + (X+1), padAddress+1, deck ] );
+      }
       // Create -32, yellow, 3
       engine.setValue(group, "beatjump_32_forward", 1);
       LaunchpadProMK3.sleep(50);
-      engine.setValue(group,"hotcue_"+(X+2)+"_set", 1);
-      engine.setValue(group,"hotcue_"+(X+2)+"_color",  0xf8d200); // yellow
-      LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + (X+2), padAddress+2, deck ] );
+      DEBUG(hotcueCheck)
+      DEBUG(engine.getValue(group,"playposition"))
+      if (hotcueCheck.includes(engine.getValue(group,"playposition")) !== true ) {
+        engine.setValue(group,"hotcue_"+(X+2)+"_set", 1);
+        engine.setValue(group,"hotcue_"+(X+2)+"_color",  0xf8d200); // yellow
+        LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + (X+2), padAddress+2, deck ] );
+      }
       // Create -16, orange, 4
       engine.setValue(group,"beatjump_16_forward", 1);
       LaunchpadProMK3.sleep(50);
-      engine.setValue(group,"hotcue_"+(X+3)+"_set", 1);
-      engine.setValue(group,"hotcue_"+(X+3)+"_color", 0xff8000); // orange
-      LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + (X+3), padAddress+3, deck ] );
+      DEBUG(hotcueCheck)
+      DEBUG(engine.getValue(group,"playposition"))
+      if (hotcueCheck.includes(engine.getValue(group,"playposition")) !== true ) {
+        engine.setValue(group,"hotcue_"+(X+3)+"_set", 1);
+        engine.setValue(group,"hotcue_"+(X+3)+"_color", 0xff8000); // orange
+        LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + (X+3), padAddress+3, deck ] );
+      }
       // Create main hotcue, red, 5
       engine.setValue(group,"beatjump_16_forward", 1);
       LaunchpadProMK3.sleep(50);
-      engine.setValue(group,"hotcue_"+(X+4)+"_set", 1);
-      engine.setValue(group,"hotcue_"+(X+4)+"_color", 0xEF1441); // red
-      LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + (X+4), padAddress+4, deck ] );
-      DEBUG("LaunchpadProMK3.lastHotcue:  " + C.O + LaunchpadProMK3.lastHotcue);
+      DEBUG(hotcueCheck)
+      DEBUG(engine.getValue(group,"playposition"))
+      if (hotcueCheck.includes(engine.getValue(group,"playposition")) !== true ) {
+        engine.setValue(group,"hotcue_"+(X+4)+"_set", 1);
+        engine.setValue(group,"hotcue_"+(X+4)+"_color", 0xEF1441); // red
+        LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + (X+4), padAddress+4, deck ] );
+        DEBUG("LaunchpadProMK3.lastHotcue:  " + C.O + LaunchpadProMK3.lastHotcue);
+      }
       return;
     };
   };
