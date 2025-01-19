@@ -720,22 +720,21 @@ LaunchpadProMK3.updateBpmScalePage = function() {
     LaunchpadProMK3.mainpadAddresses.forEach(address => {
       padPoss = ""
       DEBUG("forEach mainpadAddresses padPoss address " + address)
-      if (address > 11 && address < 28) { padPoss = 4 }
-      if (address > 31 && address < 48) { padPoss = 3 }
-      if (address > 51 && address < 68) { padPoss = 2 }
-      if (address > 71 && address < 88) { padPoss = 1 }
+      if (address > 11 && address < 28) { padPoss = 4; }
+      if (address > 31 && address < 48) { padPoss = 3; }
+      if (address > 51 && address < 68) { padPoss = 2; }
+      if (address > 71 && address < 88) { padPoss = 1; }
       DEBUG("padPoss " + padPoss)
-      deck = LaunchpadProMK3.mainpadLayout[padPoss-1]
+      let deck = LaunchpadProMK3.mainpadLayout[padPoss - 1]
       const lastDigit = address % 10;
       if (LaunchpadProMK3.bpmScaleLayout[lastDigit]) {
         let control = LaunchpadProMK3.bpmScaleLayout[lastDigit][1];
         colour = LaunchpadProMK3.bpmScaleLayout[lastDigit][2];
         midi.makeInputHandler(0xB0, address, (channel, control, value, status, group) => {
-          //if (LaunchpadProMK3.currentPage === 2 && value > 1) {
           if (value > 1) {
             DEBUG("extras " + address + " " + control);
             script.toggleControl(channel,control, 50);
-          };
+          }
         });
         DEBUG("deck " + deck);
         DEBUG("loaded[deck] " + loaded[deck]);
@@ -757,27 +756,30 @@ LaunchpadProMK3.updateBpmScalePage = function() {
 
     DEBUG(JSON.stringify(LaunchpadProMK3.bpmScaleLayout))
 
-    bpmScaledFlashes = {}
+    bpmScaledFlashes = {};
+    bpmScaledFlashTimes = {};
 
     for (let deckIndex = 1; deckIndex <= deckOrder.length; deckIndex++) {
-
       let nowBpm = engine.getValue("[Channel" + deckIndex + "]", "bpm")
       DEBUG("deckIndex " + deckIndex + "   nowBpm " + nowBpm)
-      bpmScaledFlashes[deckIndex][0] = nowBpm;
+      bpmScaledFlashes[deckIndex] = [nowBpm];
 
-      if (bpmScaledFlashes[deckIndex][0] !== 0) {
-        for (let i = 1; i < LaunchpadProMK3.bpmScaleLayout.length; i++) {
-          bpmScaledFlashes[deckIndex][i] = nowBpm * LaunchpadProMK3.bpmScaleLayout[i][1]
-          DEBUG("ratio: " + LaunchpadProMK3.bpmScaleLayout[i][1])
-          DEBUG(i + "    " + "bpmScaledFlashes " + bpmScaledFlashes)
+      if (nowBpm !== 0) {
+        for (let i = 1; i <= Object.keys(LaunchpadProMK3.bpmScaleLayout).length; i++) {
+          bpmScaledFlashes[deckIndex].push(nowBpm * LaunchpadProMK3.bpmScaleLayout[i][0]);
+          DEBUG("ratio: " + LaunchpadProMK3.bpmScaleLayout[i][0]);
+          DEBUG(i + "    " + "bpmScaledFlashes " + bpmScaledFlashes[deckIndex])
+          DEBUG(bpmScaledFlashes[deckIndex][i])
+          bpmScaledFlashTimes[deckIndex][i] = (60000/bpmScaledFlashes[deckIndex][i]);
         }
       }
       DEBUG("BPMSCALEDFLAAAAASH " + JSON.stringify(bpmScaledFlashes), C.M)
+      DEBUG("BPMSCALEDtimes " + JSON.stringify(bpmScaledFlashTimes), C.M)
 
       DEBUG(deckIndex);
       DEBUG(LaunchpadProMK3.sidepadAddresses, C.O);
       DEBUG(deckAddresses, C.O, 1);
-      let currentDeck = deckOrder[deckIndex]; // Get the current deck value
+      let currentDeck = deckOrder[deckIndex - 1]; // Get the current deck value
       let deckColour = LaunchpadProMK3.deckColours[currentDeck - 1]; // Assuming decks are 1-based indexed
       let nextAddress = deckAddresses.shift(); // Get LED address for this index
       DEBUG(nextAddress);
@@ -792,6 +794,8 @@ LaunchpadProMK3.updateBpmScalePage = function() {
       DEBUG(next4Address, C.G);
       LaunchpadProMK3.sendHEX(next4Address, deckColour); // Set the color for current deck LED
       DEBUG("extras side colour deck " + deckIndex + "  nextAddress " + nextAddress, C.O, 0, 2);
+
+      bpmScaledFlashes
 
       engine.makeConnection("[Channel" + deckIndex + "]", "beat_active", LaunchpadProMK3.tempoScaleDeckFlash )
     }
@@ -831,7 +835,7 @@ LaunchpadProMK3.loopControls = [
   // Activates a rolling loop over beatloop_size beats. Once disabled, playback
   // will resume where the track would have been if it had not entered the loop.
   // "beatlooproll_X_activate",
-  // Activates rolling loop over X beats. Once disabled, playback resumes where
+  // ctivates rolling loop over X beats. Once disabled, playback resumes where
   // the track would have been if it had not entered the loop. A control exists
   // for X = 0.03125, 0.0625, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512  "_1_activate",
   "_1_activate",
