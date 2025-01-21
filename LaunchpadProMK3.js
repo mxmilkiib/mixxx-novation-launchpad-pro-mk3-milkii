@@ -794,7 +794,7 @@ scaleInc = scale[0]
             DEBUG(scaleInc)
 //scaleIndex =    
             DEBUG("  deck " + deck)
-            address = 80 - (deck * 20) + +scale[0]
+            let address = 80 - (deck * 20) + +scale[0]
             DEBUG("  address " + address)
             channel = "[Channel" + d + "]";
             DEBUG("  channel " + channel)
@@ -862,9 +862,14 @@ scaleInc = scale[0]
 
 LaunchpadProMK3.tempoScaleDeckFlash = function(address, d, control) {
   //DEBUG("  inner flash     d " + d + "   address " + address + "    control " +  control)
-    if (!tempoScaleRun[address]) { LaunchpadProMK3.sendRGB(address, 127, 127, 127) }
-    if (tempoScaleRun[address]) { LaunchpadProMK3.sendRGB(address, 0, 0, 0) }
-  //}
+  if (!tempoScaleRun[address]) {
+    LaunchpadProMK3.sendRGB(address, 127, 127, 127);
+    LaunchpadProMK3.sendRGB(address-10, 127, 127, 127);
+  }
+  if (tempoScaleRun[address]) {
+    LaunchpadProMK3.sendRGB(address, 0, 0, 0);
+    LaunchpadProMK3.sendRGB(address-10, 0, 0, 0);
+  }
   tempoScaleRun[address] = !tempoScaleRun[address];
   DEBUG(JSON.stringify(tempoScaleRun))
   //DEBUG(LaunchpadProMK3.timer)
