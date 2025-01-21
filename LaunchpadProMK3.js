@@ -657,7 +657,7 @@ LaunchpadProMK3.beatjumpControls = [
   //"beatjump_forward",
   // Jump forward by beatjump_size. If a loop is active, the loop is moved forward by X beats
 
-  //"beatjump_X_backward",
+  //"beatjump_X_backward",0
   // Jump backward by X beats. If a loop is active, the loop is moved backward by X beats
   //"beatjump_X_forward",
   // Jump forward by X beats. If a loop is active, the loop is moved forward by X beats.
@@ -744,6 +744,9 @@ LaunchpadProMK3.updateBpmScalePage = function() {
     bpmScaledFlashTimes = [];
     LaunchpadProMK3.timer = [];
     tempoScaleRun = [];
+    //LaunchpadProMK3.mainpadAddresses.forEach( {
+    //  tempoScaleRun[address] = 0
+    //});
 
     // for each deck
     for (let d = 1; d <= 4; d+=1) {
@@ -752,8 +755,8 @@ LaunchpadProMK3.updateBpmScalePage = function() {
       DEBUG("  loaded[d] " + loaded[d], C.O);
 
       colour = LaunchpadProMK3.deckColours[d-1]
-      DEBUG("  colour " + colour);
-      //DEBUG("  colour hex " + colour.toString(16));
+      //DEBUG("  colour " + colour);
+      DEBUG("  colour hex " + colour.toString(16));
       colour = LaunchpadProMK3.hexToRGB(colour);
       if (loaded[d] === 0) {
         colour = LaunchpadProMK3.darkenRGBColour(colour,0.1);
@@ -779,8 +782,8 @@ LaunchpadProMK3.updateBpmScalePage = function() {
           bpmScaledFlashBpm[d] = [];
           DEBUG("bpmScaledFlashBpm[d] " + bpmScaledFlashBpm[d])
           bpmScaledFlashTimes[d] = [];
-          LaunchpadProMK3.timer[d] = [];
-
+          LaunchpadProMK3.timer = {};
+          LaunchpadProMK3.timer[d] = {}
           // for each pad that deck has
           scaleInc = 0
           Object.entries(LaunchpadProMK3.bpmScaleLayout).forEach(scale => {
@@ -809,10 +812,10 @@ scaleInc = scale[0]
             bpmScaledTime = (60000 / bpmScaledFlashBpm[d][scaleInc-1])
             DEBUG("  bpmScaledTime " + bpmScaledTime)
             bpmScaledFlashTimes[d].push(bpmScaledTime);
-  DEBUG(LaunchpadProMK3.timer)
+    DEBUG(JSON.stringify(LaunchpadProMK3.timer[d]))
             DEBUG("   setting timers:   d " + d + "    scale[0] " + scale[0] + "    address " + address + "   bpmScaledTime " + bpmScaledTime + "    " + bpmScaledTime, C.R);
             //LaunchpadProMK3.timer[d] = engine.beginTimer(bpmScaledFlashTimes[d].values.at(-1), function() {
-            LaunchpadProMK3.timer[address] = engine.beginTimer(bpmScaledTime, function() {
+            LaunchpadProMK3.timer[d][address] = engine.beginTimer(bpmScaledTime, function() {
               LaunchpadProMK3.tempoScaleDeckFlash(address, d, control);
               //DEBUG( address + " " + d + " " + control + "   " + bpmScaledTime)
             })
@@ -822,7 +825,7 @@ scaleInc = scale[0]
               if (value !== 0) {
                 DEBUG("extras " + address + " " + control);
                 //script.toggleControl(channel, control, 50);
-    DEBUG(LaunchpadProMK3.timer)
+    //DEBUG(JSON.stringify(LaunchpadProMK3.timer[d]))
               };
             });
             colour = LaunchpadProMK3.hexToRGB(colour)
@@ -852,23 +855,19 @@ scaleInc = scale[0]
       DEBUG("extras side colour deck " + d + "   nextAddress " + nextAddress, C.O, 0, 2);
 
     }
-    DEBUG(LaunchpadProMK3.timer)
   }
 };
 
 //engine.makeConnection("[Channel" + deckIndex + "]", "beat_active", LaunchpadProMK3.tempoScaleDeckFlash )
 
 LaunchpadProMK3.tempoScaleDeckFlash = function(address, d, control) {
-  //let targetPad = padPoss * 20;
-  //d = script.deckFromGroup(deck)
   //DEBUG("  inner flash     d " + d + "   address " + address + "    control " +  control)
-  //if (engine.getValue("[Channel" + d + "]", control)) {
     if (!tempoScaleRun[address]) { LaunchpadProMK3.sendRGB(address, 127, 127, 127) }
     if (tempoScaleRun[address]) { LaunchpadProMK3.sendRGB(address, 0, 0, 0) }
   //}
   tempoScaleRun[address] = !tempoScaleRun[address];
-    //DEBUG(LaunchpadProMK3.timer)
-  DEBUG(tempoScaleRun)
+  DEBUG(JSON.stringify(tempoScaleRun))
+  //DEBUG(LaunchpadProMK3.timer)
 }
 
 LaunchpadProMK3.stopTimers = function() {
