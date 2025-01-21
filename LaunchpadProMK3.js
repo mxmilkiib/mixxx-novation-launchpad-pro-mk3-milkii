@@ -735,6 +735,10 @@ LaunchpadProMK3.updateBpmScalePage = function() {
     let deckOrder = LaunchpadProMK3.mainpadLayout;
     DEBUG(deckOrder, C.G, 2);
     DEBUG(JSON.stringify(LaunchpadProMK3.bpmScaleLayout), C.O, 0, 1)
+
+    // Clear existing timers
+    LaunchpadProMK3.stopTimers();
+
     let loaded = [];
     bpmScaledFlashBpm = [];
     bpmScaledFlashTimes = [];
@@ -868,10 +872,13 @@ LaunchpadProMK3.tempoScaleDeckFlash = function(address, d, control) {
 }
 
 LaunchpadProMK3.stopTimers = function() {
-  for (timer in LaunchpadProMK3.timer) {
-    DEBUG("STOPING TIMERS", C.R, 1, 1)
-    engine.stopTimer(LaunchpadProMK3.timer[timer]);
+  for (let timer in LaunchpadProMK3.timer) {
+    if (LaunchpadProMK3.timer.hasOwnProperty(timer)) {
+      DEBUG("STOPPING TIMER", C.R, 1, 1)
+      engine.stopTimer(LaunchpadProMK3.timer[timer]);
+    }
   }
+  LaunchpadProMK3.timer = {};
 }
 
 
