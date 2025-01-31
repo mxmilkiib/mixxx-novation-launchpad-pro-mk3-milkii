@@ -1719,6 +1719,7 @@ LaunchpadProMK3.create4LeadupDropHotcues = function (deck, value) {
     if (hotcueStatus === 0) {
       // Create -128, teal, 1
       engine.setValue(group, "beatjump_128_backward", 1);
+      LaunchpadProMK3.sleep(25);
       pp128 = engine.getValue(group,"playposition")
       DEBUG("pp128 " +C.O+ pp128)
       DEBUG(hotcuePositions)
@@ -1730,7 +1731,6 @@ LaunchpadProMK3.create4LeadupDropHotcues = function (deck, value) {
           //create hotcue n set colour
           engine.setValue(group,"hotcue_"+X+"_set", 1);
           engine.setValue(group,"hotcue_"+X+"_color", 0x1DBEBD); // teal
-          LaunchpadProMK3.sleep(50);
           //save undo info
           //DEBUG(LaunchpadProMK3.decks[deck]);
           //DEBUG(LaunchpadProMK3.decks[deck].hotcueButtons);
@@ -1743,12 +1743,12 @@ LaunchpadProMK3.create4LeadupDropHotcues = function (deck, value) {
       }
 
       // Create -64, green, 2
-      if (pp64 > 0) {
         engine.setValue(group, "beatjump_64_forward", 1);
         LaunchpadProMK3.sleep(25);
         pp64 = engine.getValue(group,"playposition")
         DEBUG("pp64 " +C.O+ pp64)
         DEBUG(hotcuePositions)
+      if (pp64 > 0) {
         if (hotcuePositions.includes(pp64) !== true ) {
           //create hotcue n set colour
           engine.setValue(group,"hotcue_"+(X+1)+"_set", 1);
@@ -1759,12 +1759,12 @@ LaunchpadProMK3.create4LeadupDropHotcues = function (deck, value) {
       }
 
       // Create -32, yellow, 3
-      if (pp32 > 0) {
         engine.setValue(group, "beatjump_32_forward", 1);
         LaunchpadProMK3.sleep(25);
         pp32 = engine.getValue(group,"playposition")
         DEBUG("pp32 " +C.O+ pp32)
         DEBUG(hotcuePositions)
+      if (pp32 > 0) {
         if (hotcuePositions.includes(pp32) !== true ) {
           //create hotcue n set colour
           engine.setValue(group,"hotcue_"+(X+2)+"_set", 1);
@@ -1775,12 +1775,12 @@ LaunchpadProMK3.create4LeadupDropHotcues = function (deck, value) {
       }
 
       // Create -16, orange, 4
-      if (pp16 > 0) {
         engine.setValue(group,"beatjump_16_forward", 1);
         LaunchpadProMK3.sleep(25);
         pp16 = engine.getValue(group,"playposition")
         DEBUG("pp16 " +C.O+ pp16)
         DEBUG(hotcuePositions)
+      if (pp16 > 0) {
         if (hotcuePositions.includes(pp16) !== true ) {
           //create hotcue n set colour
           engine.setValue(group,"hotcue_"+(X+3)+"_set", 1);
@@ -1790,13 +1790,13 @@ LaunchpadProMK3.create4LeadupDropHotcues = function (deck, value) {
         }
       }
 
-      if (pppNow > 0) {
         // Create main hotcue, red, 5
         engine.setValue(group,"beatjump_16_forward", 1);
         LaunchpadProMK3.sleep(25);
         ppNow = engine.getValue(group,"playposition")
-        DEBUG("ppNow" +C.O+ ppNow)
+        DEBUG("ppNow " +C.O+ ppNow)
         DEBUG(hotcuePositions)
+      if (ppNow > 0) {
         if (hotcuePositions.includes(ppNow) !== true ) {
           //create hotcue n set colour
           engine.setValue(group,"hotcue_"+(X+4)+"_set", 1);
