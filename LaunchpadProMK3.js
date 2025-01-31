@@ -15,13 +15,15 @@
 // fix star up/down
 
 /// todo
-// restructure and refactor
-// make the core logic sane
 // make it more robust, add more checks
+// make the core logic sane
+// restructure and refactor
+// literary programming comments
+// make fully 2 deck compatible
+// make deck pages with one of each
 // make the bpm flash in a new place
 // better deck colour display
 // represent track colours
-// literary programming comments
 // aesthetics and consistency
 // party
 
@@ -497,7 +499,7 @@ LaunchpadProMK3.Deck = function (deckNumber) {
           if (LaunchpadProMK3.shift === 0) {
 
             /// If shift not pressed: Hotcue Creation
-            DEBUG("no shift..", C.O);
+            DEBUG("no shift..  value " + value, C.O);
             DEBUG("input: deckNumber " +C.O+ deckNumber +C.RE+ "/" +C.O+ this.currentDeck +C.RE+ ",  i " +C.O+ i +C.RE+ ",  padAddress " +C.O+ padAddress +C.RE+ "/" +C.O+ "0x" + padAddress.toString(16).padStart(2, "0").toUpperCase() +C.RE+ "   hotcueNum " +C.O+ hotcueNum, C.G);
             // Helper function to trigger hotcue activation control value on then
             // off the hotcue on press which either creates or jumps to the hotcue
