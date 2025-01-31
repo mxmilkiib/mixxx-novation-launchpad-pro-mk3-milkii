@@ -1,4 +1,4 @@
-
+//// Launchpad Pro MK3 MIDI mapping for Mixxx
 //// created by Milkii B, hi Mum
 
 /// wip
@@ -10,18 +10,18 @@
 // bpm scale page with visual aid to fix misanalysed tempo
 // fix colour brightness scaling
 // fix background for bpm scale
-
-/// todo
-// make all the base funct ionality work
+// make all the base functionality work
 // fix undo bpm scale
 // fix star up/down
+
+/// todo
+// restructure and refactor
+// make the core logic sane
+// make it more robust, add more checks
 // make the bpm flash in a new place
 // better deck colour display
 // represent track colours
-// restructure and refactor
-// more checks
-// make the core logic sane
-// make it more robust
+// literary programming comments
 // aesthetics and consistency
 // party
 
@@ -130,19 +130,16 @@ LaunchpadProMK3.mainpadLayout = "3124";
 // Preset colours for decks
 LaunchpadProMK3.deckColours = [ 0x378df7, 0xfeb108, 0xd700d7, 0x88b31a ];
 
-// Pad addresses and deck colours
-LaunchpadProMK3.switchDecksButtons = [
-  [ 0x65, 0x7F, 0x00, 0x7F ],
-  [ 0x66, 0x1D, 0x46, 0x7B ],
-  [ 0x67, 0x7F, 0x58, 0x04 ],
-  [ 0x68, 0x44, 0x60, 0x0D ] ];
+// Init deck conf base obj
+LaunchpadProMK3.deck = LaunchpadProMK3.deck || {};
 
-//LaunchpadProMK3.deck.config = {
-//  "3": { order: 1, colour: 0x378df7, selectPad: LaunchpadProMK3.row1[0] },
-//  "1": { order: 2, colour: 0xfeb108, selectPad: LaunchpadProMK3.row1[1] },
-//  "2": { order: 3, colour: 0xd700d7, selectPad: LaunchpadProMK3.row1[2] },
-//  "4": { order: 4, colour: 0x88b31a, selectPad: LaunchpadProMK3.row1[3] }
-
+// Deck physical order (pad address offsets) and deck colours
+LaunchpadProMK3.deck.config = {
+  "1": { order: 2, colour: 0x378df7, }, //blue
+  "2": { order: 3, colour: 0xfeb108, }, //orange
+  "3": { order: 1, colour: 0xd700d7, }, //magenta
+  "4": { order: 4, colour: 0x88b31a  }, //green
+}
 
 const totalDecks = LaunchpadProMK3.mainpadLayout.length;
 const totalDeckHotcues = 64/totalDecks;
@@ -182,7 +179,7 @@ LaunchpadProMK3.init = function() {
 
   DEBUG("######", C.M);
   DEBUG("######", C.C);
-  DEBUG("###### init controller script n object", C.O);
+  DEBUG("###### init controller script n objec", C.O);
   DEBUG("######", C.C);
   DEBUG("######", C.M);
   DEBUG("")
@@ -280,13 +277,11 @@ LaunchpadProMK3.sendSysEx = function(data) {
 
 LaunchpadProMK3.initExtras = function() {
   // Deck selection buttons
-  //if (totalDecks === 4) {
   // deck 3
   midi.makeInputHandler(0xB0, LaunchpadProMK3.row1[0], (channel, control, value, status, _group) => {
     if (value !== 0) { LaunchpadProMK3.selectDeck(3); }
   });
-  LaunchpadProMK3.sendRGB(LaunchpadProMK3.row1[0], 0x1D, 0x46, 0x7B); // brightP
-  //}
+  LaunchpadProMK3.sendRGB(LaunchpadProMK3.row1[0], 0xd7, 0x00, 0xd7); // bright
 
   // deck 1
   midi.makeInputHandler(0xB0, LaunchpadProMK3.row1[1], (channel, control, value, status, _group) => {
@@ -300,12 +295,11 @@ LaunchpadProMK3.initExtras = function() {
   });
   LaunchpadProMK3.sendRGB(LaunchpadProMK3.row1[2], 0x7F, 0x58, 0x04); // bright
 
-  //if (totalDecks = 4) {  // deck 4
+  // deck 4
   midi.makeInputHandler(0xB0, LaunchpadProMK3.row1[3], (channel, control, value, status, group) => {
     if (value !== 0) { LaunchpadProMK3.selectDeck(4); }
   });
   LaunchpadProMK3.sendRGB(LaunchpadProMK3.row1[3], 0x44, 0x60, 0x0D); // bright
-  //}
 
 
 
@@ -345,7 +339,6 @@ LaunchpadProMK3.initExtras = function() {
   LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[7], 0x0B, 0x0B, 0x0F);
 
 
-
   // undo last hotcue
   midi.makeInputHandler(0xB0, LaunchpadProMK3.row0[0] , (channel, control, value, status) => {
     if (value !== 0) {
@@ -364,10 +357,11 @@ LaunchpadProMK3.initExtras = function() {
 
 
   // multi hotcue creation function
-  midi.makeInputHandler(0xB0, LaunchpadProMK3.row0[4], (channel, control, value, status, group) => {
+  hotcueCreationButton = LaunchpadProMK3.row0[4]
+  midi.makeInputHandler(0xB0, hotcueCreationButton, (channel, control, value, status, group) => {
     if (value !== 0) { LaunchpadProMK3.create4LeadupDropHotcues(LaunchpadProMK3.selectedDeck, value); }
   });
-  LaunchpadProMK3.sendRGB(LaunchpadProMK3.row0[4], 0x7F, 0x7F, 0x7F);
+  LaunchpadProMK3.sendRGB(hotcueCreationButton, 0x7F, 0x7F, 0x7F);
 
 
   LaunchpadProMK3.mainpadAddresses.forEach((address) => {
@@ -405,7 +399,7 @@ LaunchpadProMK3.initExtras = function() {
   midi.makeInputHandler(0xB0, LaunchpadProMK3.row0[6], (control, value, status, group) => {
     var channel = LaunchpadProMK3.lastHotcueChannel;
     if (typeof LaunchpadProMK3.lastHotcueChannel === "undefined") { return; }
-    script.toggleControl(channel,"hotcue_focus_color_prev");
+    script.toggleControl(group,"hotcue_focus_color_prev");
   });
   LaunchpadProMK3.sendRGB(LaunchpadProMK3.row0[6], 0x20, 0x20, 0x7F);
 
@@ -413,7 +407,7 @@ LaunchpadProMK3.initExtras = function() {
   midi.makeInputHandler(0xB0, LaunchpadProMK3.row0[7], (control, value, status, group) => {
     var channel = LaunchpadProMK3.lastHotcueChannel;
     if (typeof LaunchpadProMK3.lastHotcueChannel === "undefined") { return; }
-    script.toggleControl(channel,"hotcue_focus_color_next");
+    script.toggleControl(group,"hotcue_focus_color_next");
   });
   LaunchpadProMK3.sendRGB(LaunchpadProMK3.row0[7], 0x7F, 0x20, 0x20);
 
@@ -1347,17 +1341,17 @@ LaunchpadProMK3.loopExtraControls = [
   //"reverseroll",
 ];
 
-  //DEBUG("  ")
-  //DEBUG("                              .o8                .                                                           ")
-  //DEBUG("                             '888              .o8                                                           ")
-  //DEBUG(" oooo  oooo  oo.ooooo.   .oooo888   .oooo.   .o888oo  .ooooo.       oo.ooooo.   .oooo.    .oooooooo  .ooooo. ")
-  //DEBUG(" `888  `888   888' `88b d88' `888  `P  )88b    888   d88' `88b       888' `88b `P  )88b  888' `88b  d88' `88b")
-  //DEBUG("  888   888   888   888 888   888   .oP'888    888   888ooo888       888   888  .oP'888  888   888  888ooo888")
-  //DEBUG("  888   888   888   888 888   888  d8(  888    888 . 888    .o       888   888 d8(  888  `88bod8P'  888    .o")
-  //DEBUG("  `V88V'V8P'  888bod8P' `Y8bod88P' `Y888''8o   '88'  `Y8bod8P'       888bod8P' `Y888''8o `8oooooo.  `Y8bod8P'")
-  //DEBUG("              888                                                    888                 d'     YD ")
-  //DEBUG("             o888o                                                  o888o                 'Y88888P' ")
-  //DEBUG("  ")
+//DEBUG("  ")
+//DEBUG("                              .o8                .                                                           ")
+//DEBUG("                             '888              .o8                                                           ")
+//DEBUG(" oooo  oooo  oo.ooooo.   .oooo888   .oooo.   .o888oo  .ooooo.       oo.ooooo.   .oooo.    .oooooooo  .ooooo. ")
+//DEBUG(" `888  `888   888' `88b d88' `888  `P  )88b    888   d88' `88b       888' `88b `P  )88b  888' `88b  d88' `88b")
+//DEBUG("  888   888   888   888 888   888   .oP'888    888   888ooo888       888   888  .oP'888  888   888  888ooo888")
+//DEBUG("  888   888   888   888 888   888  d8(  888    888 . 888    .o       888   888 d8(  888  `88bod8P'  888    .o")
+//DEBUG("  `V88V'V8P'  888bod8P' `Y8bod88P' `Y888''8o   '88'  `Y8bod8P'       888bod8P' `Y888''8o `8oooooo.  `Y8bod8P'")
+//DEBUG("              888                                                    888                 d'     YD ")
+//DEBUG("             o888o                                                  o888o                 'Y88888P' ")
+//DEBUG("  ")
 
 
 
@@ -1377,9 +1371,17 @@ LaunchpadProMK3.hexToRGB = function(hex) {
 
 // Send RGB values
 LaunchpadProMK3.sendRGB = function(pad, r, g, b) {
+  //DEBUG("   r " +C.O+ r +C.RE+ "   g " +C.O+ g +C.RE+ "   b " +C.O+ b);
+  if (g === undefined) {
+    g = r[1];
+    b = r[2];
+    r = r[0]
+  }
+  //DEBUG("   r " +C.O+ r +C.RE+ "   g " +C.O+ g +C.RE+ "   b " +C.O+ b);
   r = Math.floor(r/2)
   g = Math.floor(g/2)
   b = Math.floor(b/2)
+  //DEBUG("pad " +C.O+ pad +C.RE+ "   r " +C.O+ r +C.RE+ "   g " +C.O+ g +C.RE+ "   b " +C.O+ b);
   LaunchpadProMK3.sendSysEx([0x03, 0x03, pad, r, g, b]);
 };
 
@@ -1462,31 +1464,37 @@ LaunchpadProMK3.sidepadDeckColour = function(d) {
   DEBUG(next4Address, C.G);
   LaunchpadProMK3.sendHEX(next4Address, deckColour); // Set the color for current deck LED
   DEBUG("extras side colour deck " + d + "   nextAddress " + nextAddress, C.O, 0, 2);
+
 }
 
 
 // Select deck and change LEDs
 LaunchpadProMK3.selectDeck = function(deck) {
-  LaunchpadProMK3.selectedDeck = deck;
   DEBUG("### selecting deck " + deck, C.G, 3);
-  // Easier identity
-  sdb = LaunchpadProMK3.switchDecksButtons;
-  // Brightness reduction factor
-  let b = 0.1;
-
-  // far left
-  LaunchpadProMK3.sendRGB(sdb[0][0], Math.round(sdb[0][1]*b), Math.round(sdb[0][2]*b), Math.round(sdb[0][3]*b));
-  // near left
-  LaunchpadProMK3.sendRGB(sdb[1][0], Math.round(sdb[1][1]*b), Math.round(sdb[1][2]*b), Math.round(sdb[1][3]*b));
-  // near right
-  LaunchpadProMK3.sendRGB(sdb[2][0], Math.round(sdb[2][1]*b), Math.round(sdb[2][2]*b), Math.round(sdb[2][3]*b));
-  // far rght
-  LaunchpadProMK3.sendRGB(sdb[3][0], Math.round(sdb[3][1]*b), Math.round(sdb[3][2]*b), Math.round(sdb[3][3]*b));
-
-  if (deck === 3) { LaunchpadProMK3.sendRGB(sdb[0][0],sdb[0][1],sdb[0][2],sdb[0][3]); }
-  else if (deck === 1) { LaunchpadProMK3.sendRGB(sdb[1][0],sdb[1][1],sdb[1][2],sdb[1][3]); }
-  else if (deck === 2) { LaunchpadProMK3.sendRGB(sdb[2][0],sdb[2][1],sdb[2][2],sdb[2][3]); }
-  else if (deck === 4) { LaunchpadProMK3.sendRGB(sdb[3][0],sdb[3][1],sdb[3][2],sdb[3][3]); }
+  // remember selection
+  LaunchpadProMK3.selectedDeck = deck;
+  //DEBUG("o1 " + JSON.stringify(LaunchpadProMK3.deck.config))
+  //DEBUG("o2 " + JSON.stringify(LaunchpadProMK3.deck.config[deck]))
+  //DEBUG("o3 " + Object.values(LaunchpadProMK3.deck.config))
+  //DEBUG("o4 " + Object.entries(LaunchpadProMK3.deck.config))
+  //DEBUG("o5 " + Object.keys(LaunchpadProMK3.deck.config))
+  //Object.keys(LaunchpadProMK3.deck.config).forEach((d) => {
+  Object.entries(LaunchpadProMK3.deck.config).forEach((d) => {
+    //DEBUG("1 " + JSON.stringify(d))
+    //DEBUG("11 " + JSON.stringify(d[1]))
+    //DEBUG("11 " + JSON.stringify(d[1].colour))
+    //DEBUG("2 " + JSON.stringify(d))
+    //DEBUG("3 " + Object.values(d))
+    //DEBUG("4 " + Object.entries(d))
+    //DEBUG("5 " + Object.keys(d))
+    DEBUG(d[1].colour.toString(16))
+    DEBUG("11 " + JSON.stringify(d[0]))
+    rgb = LaunchpadProMK3.hexToRGB(d[1].colour);
+    DEBUG("d " + JSON.stringify(d) + "   deck " + deck + "   rgb " + rgb, C.R);
+    if (+d[0] !== deck) { rgb = LaunchpadProMK3.darkenRGBColour(rgb, deckUnloadedDimRatio); }
+    LaunchpadProMK3.sendRGB(100+d[1].order, rgb);
+    if (+d[0] === deck) { LaunchpadProMK3.sendRGB(hotcueCreationButton, rgb); }
+  });
 };
 
 
@@ -1691,74 +1699,116 @@ LaunchpadProMK3.sleep = function(time) {
 // Create a number of hotcues working back from playhead position
 // -128 -64 -32 -16 drop/breakdown
 LaunchpadProMK3.create4LeadupDropHotcues = function (deck, value) {
-  DEBUG(`# create hotcues:  ${C.Y} -128 -64 -32 -16 ${C.R}drop ${C.RE}on ${C.O}${deck},   value  ${value}`, C.G, 2);
+  DEBUG(`## create hotcues:  ${C.Y} -128 -64 -32 -16 ${C.R}drop ${C.RE}on ${C.O}${deck},   value ${value}`, C.G, 2);
   if (value === 0 || value === undefined) return 0;
   group = `[Channel${deck}]`;
-  hotcueCheck = [];
-  for (let h = 1; h<=20; h++) {
-    hotcueCheck[h] = engine.getValue(group, "hotcue_" + h + "_position" )
+  hotcuePositions = [];
+  for (let h = 0; h<=19; h++) {
+    hotcuePositions[h] = engine.getValue(group, "hotcue_" + (+h+1) + "_position" )
+    //DEBUG(hotcuePositions)
   }
-  DEBUG(hotcueCheck)
+  DEBUG("hotcuePositions " +C.O+ hotcuePositions)
+  samplesTotal = engine.getValue(group, "track_samples");
+  playPosition = engine.getValue(group, "playposition");
+  samplesNow = samplesTotal * playPosition;
+  DEBUG("now " +C.O+ samplesNow +C.RE+ " / " +C.O+ samplesTotal)
+
   for (let X = 1; X <= 19; X++) {
-    DEBUG(X)
-    let hotcueVariable = "hotcue_" + X + "_status";
-    if (engine.getValue(group, hotcueVariable) === 0) {
-      //X += 4;
+    let hotcueStatus = engine.getValue(group, "hotcue_" + X + "_status");
+    DEBUG("X " +C.O+ X +C.RE+ "   hotcueStatus " +C.O+ hotcueStatus)
+    if (hotcueStatus === 0) {
       // Create -128, teal, 1
       engine.setValue(group, "beatjump_128_backward", 1);
-      LaunchpadProMK3.sleep(50);
-      DEBUG(engine.getValue(group,"playposition"))
-      DEBUG(hotcueCheck)
-      if (hotcueCheck.includes(engine.getValue(group,"playposition")) !== true ) {
-        engine.setValue(group,"hotcue_"+X+"_set", 1);
-        engine.setValue(group,"hotcue_"+X+"_color", 0x1DBEBD); // teal
-        padAddress = LaunchpadProMK3.decks[deck].hotcueButtons[X].padAddress;
-        LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + X, padAddress, deck ] );
-        DEBUG("LaunchpadProMK3.lastHotcue:  " +C.O+ LaunchpadProMK3.lastHotcue);
+      pp128 = engine.getValue(group,"playposition")
+      DEBUG("pp128 " +C.O+ pp128)
+      DEBUG(hotcuePositions)
+      if (hotcuePositions.includes(pp128) === true ) {
+        DEBUG("hotcue clash! pp128 " + hotcuePositions.indexOf(pp128));
       }
+      if (hotcuePositions.includes(pp128) !== true ) {
+        if (pp128 > 0) {
+          //create hotcue n set colour
+          engine.setValue(group,"hotcue_"+X+"_set", 1);
+          engine.setValue(group,"hotcue_"+X+"_color", 0x1DBEBD); // teal
+          LaunchpadProMK3.sleep(50);
+          //save undo info
+          //DEBUG(LaunchpadProMK3.decks[deck]);
+          //DEBUG(LaunchpadProMK3.decks[deck].hotcueButtons);
+          //DEBUG(LaunchpadProMK3.decks[deck].hotcueButtons[X]);
+          DEBUG(LaunchpadProMK3.decks[deck].hotcueButtons[X].padAddress);
+          pad = LaunchpadProMK3.decks[deck].hotcueButtons[X].padAddress;
+          LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + X, pad, deck ] );
+          DEBUG("LaunchpadProMK3.lastHotcue:  " +C.O+ LaunchpadProMK3.lastHotcue);
+        }
+      }
+
       // Create -64, green, 2
-      engine.setValue(group, "beatjump_64_forward", 1);
-      LaunchpadProMK3.sleep(50);
-      DEBUG(hotcueCheck)
-      DEBUG(engine.getValue(group,"playposition"))
-      if (hotcueCheck.includes(engine.getValue(group,"playposition")) !== true ) {
-        engine.setValue(group,"hotcue_"+(X+1)+"_set", 1);
-        engine.setValue(group,"hotcue_"+(X+1)+"_color", 0x8DC63F); // green
-        LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + (X+1), padAddress+1, deck ] );
+      if (pp64 > 0) {
+        engine.setValue(group, "beatjump_64_forward", 1);
+        LaunchpadProMK3.sleep(25);
+        pp64 = engine.getValue(group,"playposition")
+        DEBUG("pp64 " +C.O+ pp64)
+        DEBUG(hotcuePositions)
+        if (hotcuePositions.includes(pp64) !== true ) {
+          //create hotcue n set colour
+          engine.setValue(group,"hotcue_"+(X+1)+"_set", 1);
+          engine.setValue(group,"hotcue_"+(X+1)+"_color", 0x8DC63F); // green
+          //save undo info
+          LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + (X+1), padAddress+1, deck ] );
+        }
       }
+
       // Create -32, yellow, 3
-      engine.setValue(group, "beatjump_32_forward", 1);
-      LaunchpadProMK3.sleep(50);
-      DEBUG(hotcueCheck)
-      DEBUG(engine.getValue(group,"playposition"))
-      if (hotcueCheck.includes(engine.getValue(group,"playposition")) !== true ) {
-        engine.setValue(group,"hotcue_"+(X+2)+"_set", 1);
-        engine.setValue(group,"hotcue_"+(X+2)+"_color",  0xf8d200); // yellow
-        LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + (X+2), padAddress+2, deck ] );
+      if (pp32 > 0) {
+        engine.setValue(group, "beatjump_32_forward", 1);
+        LaunchpadProMK3.sleep(25);
+        pp32 = engine.getValue(group,"playposition")
+        DEBUG("pp32 " +C.O+ pp32)
+        DEBUG(hotcuePositions)
+        if (hotcuePositions.includes(pp32) !== true ) {
+          //create hotcue n set colour
+          engine.setValue(group,"hotcue_"+(X+2)+"_set", 1);
+          engine.setValue(group,"hotcue_"+(X+2)+"_color",  0xf8d200); // yellow
+          //save undo info
+          LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + (X+2), padAddress+2, deck ] );
+        }
       }
+
       // Create -16, orange, 4
-      engine.setValue(group,"beatjump_16_forward", 1);
-      LaunchpadProMK3.sleep(50);
-      DEBUG(hotcueCheck)
-      DEBUG(engine.getValue(group,"playposition"))
-      if (hotcueCheck.includes(engine.getValue(group,"playposition")) !== true ) {
-        engine.setValue(group,"hotcue_"+(X+3)+"_set", 1);
-        engine.setValue(group,"hotcue_"+(X+3)+"_color", 0xff8000); // orange
-        LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + (X+3), padAddress+3, deck ] );
+      if (pp16 > 0) {
+        engine.setValue(group,"beatjump_16_forward", 1);
+        LaunchpadProMK3.sleep(25);
+        pp16 = engine.getValue(group,"playposition")
+        DEBUG("pp16 " +C.O+ pp16)
+        DEBUG(hotcuePositions)
+        if (hotcuePositions.includes(pp16) !== true ) {
+          //create hotcue n set colour
+          engine.setValue(group,"hotcue_"+(X+3)+"_set", 1);
+          engine.setValue(group,"hotcue_"+(X+3)+"_color", 0xff8000); // orange
+          //save undo info
+          LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + (X+3), padAddress+3, deck ] );
+        }
       }
-      // Create main hotcue, red, 5
-      engine.setValue(group,"beatjump_16_forward", 1);
-      LaunchpadProMK3.sleep(50);
-      DEBUG(hotcueCheck)
-      DEBUG(engine.getValue(group,"playposition"))
-      if (hotcueCheck.includes(engine.getValue(group,"playposition")) !== true ) {
-        engine.setValue(group,"hotcue_"+(X+4)+"_set", 1);
-        engine.setValue(group,"hotcue_"+(X+4)+"_color", 0xEF1441); // red
-        LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + (X+4), padAddress+4, deck ] );
-        DEBUG("LaunchpadProMK3.lastHotcue:  " +C.O+ LaunchpadProMK3.lastHotcue);
+
+      if (pppNow > 0) {
+        // Create main hotcue, red, 5
+        engine.setValue(group,"beatjump_16_forward", 1);
+        LaunchpadProMK3.sleep(25);
+        ppNow = engine.getValue(group,"playposition")
+        DEBUG("ppNow" +C.O+ ppNow)
+        DEBUG(hotcuePositions)
+        if (hotcuePositions.includes(ppNow) !== true ) {
+          //create hotcue n set colour
+          engine.setValue(group,"hotcue_"+(X+4)+"_set", 1);
+          engine.setValue(group,"hotcue_"+(X+4)+"_color", 0xEF1441); // red
+          //save undo info
+          LaunchpadProMK3.lastHotcue.unshift( [ "[Channel" + deck + "]", "hotcue_" + (X+4), padAddress+4, deck ] );
+          DEBUG("LaunchpadProMK3.lastHotcue:  " +C.O+ LaunchpadProMK3.lastHotcue);
+        }
       }
+      //exit routine
+      DEBUG("# end multi hotcue creation", C.R, 0, 2)
       return;
     };
   };
-  DEBUG("# end multi hotcue creation", C.R, 0, 2)
 };
