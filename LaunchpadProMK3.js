@@ -685,9 +685,9 @@ LaunchpadProMK3.Deck = function (deckNumber) {
         if (LaunchpadProMK3.currentPage === 0) {
           LaunchpadProMK3.trackWithIntroOutro(value, deckNumber, padAddress);
         }
-      } //end makeConnection
+      }) //end makeConnection
 
-    }); //end sidepad button components
+    }); //end sidepad button component
   }; //end sidepad init loop
   DEBUG("# ending sidepads init", C.R, 0, 2);
 
