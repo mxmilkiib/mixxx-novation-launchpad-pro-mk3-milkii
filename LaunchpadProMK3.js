@@ -834,10 +834,10 @@ LaunchpadProMK3.updateHotcuePage = function(deck) {
   DEBUG("  888   888   888   888 888   888   .oP'888    888   888ooo888       888   888  .oP'888  888   888  888ooo888      888    888 ", C.M)
   DEBUG("  888   888   888   888 888   888  d8(  888    888 . 888    .o       888   888 d8(  888  `88bod8P'  888    .o      `88b  d88' ", C.M)
   DEBUG("  `V88V'V8P'  888bod8P' `Y8bod88P' `Y888''8o   '88'  `Y8bod8P'       888bod8P' `Y888''8o `8oooooo.  `Y8bod8P'       `Y8bd8P'  ", C.M)
-  DEBUG("              888                                                    888                 d'     YD ", C.M)
-  DEBUG("             o888o                                                  o888o                 'Y88888P' ", C.M)
+  DEBUG("              888                                                    888                 d'     YD "                           , C.M)
+  DEBUG("             o888o                                                  o888o                 'Y88888P' "                          , C.M)
   DEBUG("  ")
-  DEBUG(" LaunchpadProMK3.updateHotcuePage() ", C.M)
+  DEBUG(" LaunchpadProMK3.updateHotcuePage() ", C.B)
   DEBUG("### set/refresh hotcue page, deck " + deck, C.M);
   if (deck === undefined) {
     DEBUG("## deck undefined = updating all decks..", C.O, 1);
@@ -994,16 +994,16 @@ LaunchpadProMK3.updateBeatjumpPage = function() {
   if (LaunchpadProMK3.currentPage === 1) {
     DEBUG("  ")
     DEBUG("                              .o8                .                                                                 .o  ", C.M)
-    DEBUG("                             '888              .o8                                                               o888 ", C.M)
-    DEBUG(" oooo  oooo  oo.ooooo.   .oooo888   .oooo.   .o888oo  .ooooo.      oo.ooooo.   .oooo.    .oooooooo  .ooooo.       888 ", C.M)
-    DEBUG(" `888  `888   888' `88b d88' `888  `P  )88b    888   d88' `88b      888' `88b `P  )88b  888' `88b  d88' `88b      888 ", C.M)
-    DEBUG("  888   888   888   888 888   888   .oP'888    888   888ooo888      888   888  .oP'888  888   888  888ooo888      888 ", C.M)
-    DEBUG("  888   888   888   888 888   888  d8(  888    888 . 888    .o      888   888 d8(  888  `88bod8P'  888    .o      888 ", C.M)
+    DEBUG("                             '888              .o8                                                               o888  ", C.M)
+    DEBUG(" oooo  oooo  oo.ooooo.   .oooo888   .oooo.   .o888oo  .ooooo.      oo.ooooo.   .oooo.    .oooooooo  .ooooo.       888  ", C.M)
+    DEBUG(" `888  `888   888' `88b d88' `888  `P  )88b    888   d88' `88b      888' `88b `P  )88b  888' `88b  d88' `88b      888  ", C.M)
+    DEBUG("  888   888   888   888 888   888   .oP'888    888   888ooo888      888   888  .oP'888  888   888  888ooo888      888  ", C.M)
+    DEBUG("  888   888   888   888 888   888  d8(  888    888 . 888    .o      888   888 d8(  888  `88bod8P'  888    .o      888  ", C.M)
     DEBUG("  `V88V'V8P'  888bod8P' `Y8bod88P' `Y888''8o   '88'  `Y8bod8P'      888bod8P' `Y888''8o `8oooooo.  `Y8bod8P'     o888o ", C.M)
-    DEBUG("              888                                                   888                 d'     YD  ", C.M)
-    DEBUG("             o888o                                                 o888o                 'Y88888P' ", C.M)
+    DEBUG("              888                                                   888                 d'     YD  "                    , C.M)
+    DEBUG("             o888o                                                 o888o                 'Y88888P' "                    , C.M)
     DEBUG("  ")
-    DEBUG("### updateBeatjumpPage", C.M, 0, 1);
+    DEBUG("### updateBeatjumpPage", C.B, 0, 1);
     for (let deck = 1; deck <= totalDecks; deck+=1 ) {
       let deckColour = LaunchpadProMK3.decks[deck].deckColour;
       DEBUG("deck " + deck + "   deckColour #"+ deckColour, C.G, 1);
@@ -1052,6 +1052,7 @@ LaunchpadProMK3.bpmScaling = {
   "8": { scale: 1.5,   control: "beats_set_double",       colour: 0x111111 }
 };
 
+            DEBUG()
 LaunchpadProMK3.updateBpmScalePage = function() {
   if (LaunchpadProMK3.currentPage === 2) {
     DEBUG("  ")
@@ -1062,10 +1063,10 @@ LaunchpadProMK3.updateBpmScalePage = function() {
     DEBUG("  888   888   888   888 888   888   .oP'888    888   888ooo888      888   888  .oP'888  888   888  888ooo888       .dP'     ", C.M)
     DEBUG("  888   888   888   888 888   888  d8(  888    888 . 888    .o      888   888 d8(  888  `88bod8P'  888    .o     .oP        ", C.M)
     DEBUG("  `V88V'V8P'  888bod8P' `Y8bod88P' `Y888''8o   '88'  `Y8bod8P'      888bod8P' `Y888''8o `8oooooo.  `Y8bod8P'     8888888888 ", C.M)
-    DEBUG("              888                                                   888                 d'     YD  ", C.M)
-    DEBUG("             o888o                                                 o888o                 'Y88888P' ", C.M)
+    DEBUG("              888                                                   888                 d'     YD  "                         , C.M)
+    DEBUG("             o888o                                                 o888o                 'Y88888P' "                         , C.M)
     DEBUG("  ")
-    DEBUG("### updateBpmScalePage", C.M, 0, 1);
+    DEBUG("### updateBpmScalePage", C.B, 0, 1);
     LaunchpadProMK3.clearMain();
     //let deckOrder = LaunchpadProMK3.numberOfDecks;
     //DEBUG(deckOrder, C.G);
@@ -1090,10 +1091,10 @@ LaunchpadProMK3.updateBpmScalePage = function() {
       DEBUG("############################ " + deck, C.R)
 
       // clear bpm timers
-      LaunchpadProMK3.decks[deck].bpmTimer = 0;
+      LaunchpadProMK3.decks[deck].bpmTimer = "";
 
       DEBUG("deck " +C.O+ deck, C.G, 1);
-      if (deck === 5) return
+      if (deck > 4) continue
 
       /// if deck unloaded, dim and set bg colour
       loaded[deck] = engine.getValue(`[Channel${deck}]`, "track_loaded")
@@ -1104,7 +1105,7 @@ LaunchpadProMK3.updateBpmScalePage = function() {
       deckColour = LaunchpadProMK3.hexToRGB(deckColour);
       //if (loaded[d] === 0) { deckColour = LaunchpadProMK3.darkenRGBColour(deckColour, deckLoadedDimscale); }
       deckColour = LaunchpadProMK3.darkenRGBColour(deckColour, deckUnloadedDimscale);
-      DEBUG("  deckColour rgb " +C.O+ deckColour)
+      DEBUG("  deckColour rgb " +C.O+ "#" + deckColour)
 
       DEBUG("set all deck pads to default")
       pads = LaunchpadProMK3.decks[deck].pads;
@@ -1130,7 +1131,6 @@ LaunchpadProMK3.updateBpmScalePage = function() {
         DEBUG("  bpm " +C.O+ bpm, C.G, 1, 1);
 
         if (bpm !== 0) {
-
           // initiate array for scaled bpms
           bpmScaledFlashBpm[deck] = [];
           // initiate array for scaled beat length
@@ -1138,24 +1138,20 @@ LaunchpadProMK3.updateBpmScalePage = function() {
           // initiate object for timer using beat length
           LaunchpadProMK3.decks[deck].bpmTimer = {};
 
-
           DEBUG("bpmScaledFlashBpm[deck] " +C.O+ bpmScaledFlashBpm[deck])
           // for each pad that deck has
 
 
           // for each deck, for each ratio element of the row
           // calculate and start timers for animation
-
           //scales = LaunchpadProMK3.bpmScaling
           scaleInc = 1
-
           /// for each 8 scale entries in the scaling object, for 8 columns
-
           Object.entries(LaunchpadProMK3.bpmScaling).forEach((ratio) => {
             // collect values for the pad
             channel = "[Channel" + deck + "]";
 
-            DEBUG("timer; " + JSON.stringify(LaunchpadProMK3.decks[deck].bpmTimer), C.O)
+            DEBUG("timer " + JSON.stringify(LaunchpadProMK3.decks[deck].bpmTimer), C.O)
             DEBUG("ratio " + JSON.stringify(ratio), C.O);
             DEBUG("scaleInc " + scaleInc);
             DEBUG("ratio[0] " + JSON.stringify(ratio[0]));
@@ -1170,15 +1166,24 @@ LaunchpadProMK3.updateBpmScalePage = function() {
             let address = 80 - (deck * 20) + +scaleInc
 
             // with this scale, at this bpm, how long between beats?
-            DEBUG(deck)
-            DEBUG(bpmScaledFlashBpm[deck])
+            DEBUG("deck" + deck)
+            DEBUG(bpmScaledFlashBpm[deck], C.G)
             DEBUG(bpm)
+            DEBUG(typeof bpm)
             DEBUG(scale)
-            let newbpm = bpm * scale
+            DEBUG(typeof scale)
+            DEBUG(bpm * scale)
+            let newbpm = Math.round(bpm * scale)
+
             DEBUG(newbpm)
+            DEBUG(Math.round(newbpm))
 
             bpmScaledFlashBpm[deck].push(newbpm);
+
+            DEBUG("  bpmScaledFlashBpm[deck] " + bpmScaledFlashBpm[deck])
             bpmScaledTime = (60000 / bpmScaledFlashBpm[deck][scaleInc])
+            DEBUG("  bpmScaledTime " + bpmScaledTime)
+            DEBUG()
             DEBUG("  bpmScaledTime " + bpmScaledTime)
             bpmScaledFlashTimes[deck].push(bpmScaledTime);
             DEBUG(bpmScaledFlashTimes[deck])
@@ -1197,25 +1202,29 @@ LaunchpadProMK3.updateBpmScalePage = function() {
 
 
             //const lastDigit = address % 10;
-            if (deck === 5) return
             //DEBUG("   setting timers:   deck " + deck + "    scale[0] " + scale[0] + "    address " + address + "   bpmScaledTime " + bpmScaledTime + "    " + bpmScaledTime, C.R);
             //LaunchpadProMK3.decks[deck].bpmTimer = engine.beginTimer(bpmScaledFlashTimes[deck].values.at(-1), function()
-
-            //DEBUG(LaunchpadProMK3.decks[d].bpmoTimer[address])
-
-
+            //DEBUG(LaunchpadProMK3.decks[d].bpmTimer[address])
 
 
             // animation timers
-            LaunchpadProMK3.decks[deck].bpmTimer[address] = engine.beginTimer(bpmScaledTime, function() {
-              DEBUG(deck)
-              DEBUG("############################ " + deck, C.R)
-              //if (deck === 5) return
-              //LaunchpadProMK3.tempoScaleDeckFlash(address, deck-1, control, colour);
-              //DEBUG( address + " " + d + " " + control + "   " + bpmScaledTime)
-            })
+            if (deck <= 4) {
+              LaunchpadProMK3.decks[deck].bpmTimer[address] = engine.beginTimer(bpmScaledTime, function() {
+                LaunchpadProMK3.sleep(500)
+                DEBUG(deck)
+                if (deck > 4) {
+                DEBUG("############################ " + deck, C.G)
+                  //DEBUG(JSON.stringify(LaunchpadProMK3.decks))
+                  DEBUG(JSON.stringify(LaunchpadProMK3.decks[deck].bpmTimer))
+                  engine.stopTimer(LaunchpadProMK3.decks[deck].bpmTimer[address]);
+                } else {
+                DEBUG("############################ " + deck, C.R)
+                  LaunchpadProMK3.tempoScaleDeckFlash(address, deck, control, colour);
+                  DEBUG(address + " " + d + " " + control + "   " + bpmScaledTime)
+                }
 
-
+              })
+            }
 
 
 
@@ -1337,10 +1346,10 @@ LaunchpadProMK3.updateLoopPage = function() {
   DEBUG("  888   888   888   888 888   888   .oP'888    888   888ooo888       888   888  .oP'888  888   888  888ooo888           `88b. ", C.M)
   DEBUG("  888   888   888   888 888   888  d8(  888    888 . 888    .o       888   888 d8(  888  `88bod8P'  888    .o      o.   .88P  ", C.M)
   DEBUG("  `V88V'V8P'  888bod8P' `Y8bod88P' `Y888''8o   '88'  `Y8bod8P'       888bod8P' `Y888''8o `8oooooo.  `Y8bod8P'      `8bd88P'   ", C.M)
-  DEBUG("              888                                                    888                 d'     YD ")
-  DEBUG("             o888o                                                  o888o                 'Y88888P' ")
+  DEBUG("              888                                                    888                 d'     YD                            ")
+  DEBUG("             o888o                                                  o888o                 'Y88888P'                           ")
   DEBUG("")
-  DEBUG("## updateLoopPage", C.M, 0, 1);
+  DEBUG("## updateLoopPage", C.B, 0, 1);
 
   LaunchpadProMK3.clearMain();
 
@@ -1388,10 +1397,10 @@ LaunchpadProMK3.updateReverseLoopPage = function() {
     DEBUG("  888   888   888   888 888   888   .oP'888    888   888ooo888       888   888  .oP'888  888   888  888ooo888      88ooo888oo ", C.M)
     DEBUG("  888   888   888   888 888   888  d8(  888    888 . 888    .o       888   888 d8(  888  `88bod8P'  888    .o           888   ", C.M)
     DEBUG("  `V88V'V8P'  888bod8P' `Y8bod88P' `Y888''8o   '88'  `Y8bod8P'       888bod8P' `Y888''8o `8oooooo.  `Y8bod8P'          o888o  ", C.M)
-    DEBUG("              888                                                    888                 d'     YD ", C.M)
-    DEBUG("             o888o                                                  o888o                 'Y88888P' ", C.M)
+    DEBUG("              888                                                    888                 d'     YD                            ", C.M)
+    DEBUG("             o888o                                                  o888o                 'Y88888P'                           ", C.M)
     DEBUG("  ")
-    DEBUG("## updateReverseLoopPage", C.M, 0, 1);
+    DEBUG("## updateReverseLoopPage", C.B, 0, 1);
     LaunchpadProMK3.clearMain();
     for (let deck = 1; deck <= 4; deck+=1 ) {
       let deckColour = LaunchpadProMK3.decks[deck].deckColour;
@@ -1522,8 +1531,8 @@ LaunchpadProMK3.loopExtraControls = [
 //DEBUG("  888   888   888   888 888   888   .oP'888    888   888ooo888       888   888  .oP'888  888   888  888ooo888")
 //DEBUG("  888   888   888   888 888   888  d8(  888    888 . 888    .o       888   888 d8(  888  `88bod8P'  888    .o")
 //DEBUG("  `V88V'V8P'  888bod8P' `Y8bod88P' `Y888''8o   '88'  `Y8bod8P'       888bod8P' `Y888''8o `8oooooo.  `Y8bod8P'")
-//DEBUG("              888                                                    888                 d'     YD ")
-//DEBUG("             o888o                                                  o888o                 'Y88888P' ")
+//DEBUG("              888                                                    888                 d'     YD            ")
+//DEBUG("             o888o                                                  o888o                 'Y88888P'           ")
 //DEBUG("  ")
 
 
