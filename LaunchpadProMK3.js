@@ -1083,6 +1083,7 @@ LaunchpadProMK3.updateBpmScalePage = function() {
     bpmScaledTimes = [];
     tempoScaleRun = [];
 
+          LaunchpadProMK3.bpmTimer = [];
 
     DEBUG("starting timer creation loop")
     // for each deck
@@ -1090,7 +1091,7 @@ LaunchpadProMK3.updateBpmScalePage = function() {
       DEBUG("############################ " + deck, C.R)
 
       // clear bpm timers
-      LaunchpadProMK3.decks[deck].bpmTimer = "";
+      //LaunchpadProMK3.bpmTimer = "";
 
       DEBUG("deck " +C.O+ deck, C.G, 1);
       if (deck > 4) continue
@@ -1138,7 +1139,7 @@ LaunchpadProMK3.updateBpmScalePage = function() {
           // initiate array for scaled beat length
           bpmScaledTimes[deck] = [];
           // initiate object for timer using beat length
-          LaunchpadProMK3.decks[deck].bpmTimer = [];
+          //LaunchpadProMK3.bpmTimer = [];
 
 
           // for each deck, for each ratio element of the row
@@ -1181,7 +1182,7 @@ LaunchpadProMK3.updateBpmScalePage = function() {
             bpmScaledTimes[deck].push(bpmScaledTime);
             DEBUG("bpmScaledTimes[deck] " + bpmScaledTimes[deck], C.RE, 0, 1)
 
-            DEBUG("LaunchpadProMK3.decks["+deck+"].bpmTimer " + JSON.stringify(LaunchpadProMK3.decks[deck].bpmTimer), C.O)
+            DEBUG("LaunchpadProMK3.bpmTimer " + JSON.stringify(LaunchpadProMK3.bpmTimer), C.O)
 
             DEBUG(
               C.RE+ "  deck " +C.O+ deck +
@@ -1198,27 +1199,28 @@ LaunchpadProMK3.updateBpmScalePage = function() {
 
             // animation timers
             if (deck <= 4 ) {
-
-              LaunchpadProMK3.decks[deck].bpmTimer[address] = engine.beginTimer(bpmScaledTime, function() {
+              DEBUG("creating timer...")
+              LaunchpadProMK3.bpmTimer[address] = engine.beginTimer(bpmScaledTime, function() {
                 LaunchpadProMK3.sleep(500)
-                DEBUG("deck " + deck, C.G, 1)
+                this.deck = deck
+                DEBUG("this.deck " + this.deck, C.G, 1)
                 DEBUG("address " + address, C.G)
-                DEBUG("#################################################################################### " + deck, C.C)
-                if (deck > 4) {
-                  DEBUG("############################ " + deck, C.G)
+                DEBUG("#################################################################################### " + this.deck, C.C)
+                if (this.deck > 4) {
+                  DEBUG("############################ " + this.deck, C.G)
                   //DEBUG(JSON.stringify(LaunchpadProMK3.decks))
                   DEBUG("LaunchpadProMK3.decks " + JSON.stringify(LaunchpadProMK3.decks))
-                  DEBUG("LaunchpadProMK3.decks["+deck+"] " + JSON.stringify(LaunchpadProMK3.decks[deck]))
-                  DEBUG("LaunchpadProMK3.decks["+deck+"].bpmTimer " + JSON.stringify(LaunchpadProMK3.decks[deck].bpmTimer), C.O)
-                  engine.stopTimer(LaunchpadProMK3.decks[deck].bpmTimer[address]);
+                  //DEBUG("LaunchpadProMK3.decks["+this.deck+"] " + JSON.stringify(LaunchpadProMK3.decks[this.deck]))
+                  DEBUG("LaunchpadProMK3.bpmTimer " + JSON.stringify(LaunchpadProMK3.bpmTimer), C.O)
+                  engine.stopTimer(LaunchpadProMK3.bpmTimer[address]);
                 } else {
-                  DEBUG("############################ " + deck, C.R)
-                  LaunchpadProMK3.tempoScaleDeckFlash(address, deck, control, colour);
-                  DEBUG(address + " " + d + " " + control + "   " + bpmScaledTime)
+                  DEBUG("############################ " + this.deck, C.R)
+                  LaunchpadProMK3.tempoScaleDeckFlash(address, this.deck, control, colour);
+                  DEBUG(address + " " + this.deck + " " + control + "   " + bpmScaledTime)
                   //DEBUG(JSON.stringify(LaunchpadProMK3.decks))
                   DEBUG("LaunchpadProMK3.decks " + JSON.stringify(LaunchpadProMK3.decks))
-                  DEBUG("LaunchpadProMK3.decks["+deck+"] " + JSON.stringify(LaunchpadProMK3.decks[deck]))
-                  DEBUG("LaunchpadProMK3.decks["+deck+"].bpmTimer " + JSON.stringify(LaunchpadProMK3.decks[deck].bpmTimer), C.R)
+                  //DEBUG("LaunchpadProMK3.decks["+this.deck+"] " + JSON.stringify(LaunchpadProMK3.decks[this.deck]))
+                  DEBUG("LaunchpadProMK3.bpmTimer " + JSON.stringify(LaunchpadProMK3.bpmTimer), C.R)
                 }
               })
             }
@@ -1279,19 +1281,19 @@ LaunchpadProMK3.stopBpmTimers = function() {
   //DEBUG("stopBpmTimers", C.G, 2, 1)LaunchpadProMK3.deck.config[deck].colour
   for (let deck = 1; deck <= totalDecks; deck += 1 ) {
     //DEBUG("totalDecks " + totalDecks + "   deck " + deck)
-    if (LaunchpadProMK3.decks[deck]) {
-      if (LaunchpadProMK3.decks[deck].bpmTimer) {
+    //if (LaunchpadProMK3.decks[deck]) {
+      if (LaunchpadProMK3.bpmTimer) {
         //DEBUG(JSON.stringify(LaunchpadProMK3.decks[deck].bpmTimer))
-        for (let t in LaunchpadProMK3.decks[deck].bpmTimer) {
+        for (let t in LaunchpadProMK3.bpmTimer) {
           //DEBUG("  t; " + t)
           //if (LaunchpadProMK3.decks[deck].bpmTimer[t].hasOwnProperty(t)) {
           //DEBUG("LaunchpadProMK3.decks[deck].bpmTimer.hasOwnProperty(t); " + LaunchpadProMK3.decks[deck].bpmTimer.hasOwnProperty(t))
           //DEBUG("STOPPING TIMER", C.O, 1)
-          engine.stopTimer(LaunchpadProMK3.decks[deck].bpmTimer[t]);
+          engine.stopTimer(LaunchpadProMK3.bpmTimer[t]);
           //engine.stopTimer(LaunchpadProMK3.decks[deck].bpmTimer);
           //}
         }
-      }
+      //}
     }
     //LaunchpadProMK3.decks[d].bpmTimer = [];
   }
