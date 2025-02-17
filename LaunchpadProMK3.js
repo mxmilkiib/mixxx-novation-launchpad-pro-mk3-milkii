@@ -1334,7 +1334,7 @@ LaunchpadProMK3.create4LeadupDropHotcues = function (deck, value) {
     // perform it
     engine.setValue(group, control, 1)
     // pause so the jump takes effect
-    LaunchpadProMK3.sleep(125);
+    LaunchpadProMK3.sleep(100);
     // how far through the track is ther, between 0-1
     playPosition = engine.getValue(group, "playposition");
     // if it's before 0, aka the start of the track then..
