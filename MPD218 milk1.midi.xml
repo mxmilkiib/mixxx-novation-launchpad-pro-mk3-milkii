@@ -1,0 +1,105 @@
+<?xml version='1.0' encoding='utf-8'?>
+<MixxxControllerPreset mixxxVersion="" schemaVersion="1">
+    <info>
+        <name>MPD218 milk1</name>
+    </info>
+    <controller id="">
+        <scriptfiles>
+            <file filename="MPD218 milk1.js" functionprefix="MPD218milk1"/>
+        </scriptfiles>
+        <controls>
+            <control>
+                <group>[Channel3]</group>
+                <key>beats_translate_move</key>
+                <description>MIDI Learned from 214 messages.</description>
+                <status>0xB0</status>
+                <midino>0x10</midino>
+                <options>
+                    <selectknob/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>beats_translate_move</key>
+                <description>MIDI Learned from 140 messages.</description>
+                <status>0xB0</status>
+                <midino>0x11</midino>
+                <options>
+                    <invert/>
+                    <selectknob/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>beats_translate_move</key>
+                <description>MIDI Learned from 163 messages.</description>
+                <status>0xB0</status>
+                <midino>0x12</midino>
+                <options>
+                    <selectknob/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>beats_translate_move</key>
+                <description>MIDI Learned from 98 messages.</description>
+                <status>0xB0</status>
+                <midino>0x13</midino>
+                <options>
+                    <selectknob/>
+                </options>
+            </control>
+            <control>
+                <group>[Master]</group>
+                <key>headGain</key>
+                <description>MIDI Learned from 323 messages.</description>
+                <status>0xB0</status>
+                <midino>0x1A</midino>
+                <options>
+                    <selectknob/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel3]</group>
+                <key>bpmlock</key>
+                <description>MIDI Learned from 5 messages.</description>
+                <status>0x99</status>
+                <midino>0x24</midino>
+                <options>
+                    <normal/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>bpmlock</key>
+                <description>MIDI Learned from 2 messages.</description>
+                <status>0x99</status>
+                <midino>0x25</midino>
+                <options>
+                    <normal/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel2]</group>
+                <key>bpmlock</key>
+                <description>MIDI Learned from 6 messages.</description>
+                <status>0x99</status>
+                <midino>0x26</midino>
+                <options>
+                    <normal/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel4]</group>
+                <key>bpmlock</key>
+                <description>MIDI Learned from 2 messages.</description>
+                <status>0x99</status>
+                <midino>0x27</midino>
+                <options>
+                    <normal/>
+                </options>
+            </control>
+        </controls>
+        <outputs/>
+    </controller>
+</MixxxControllerPreset>
