@@ -474,25 +474,52 @@ LaunchpadProMK3.initExtras = function () {
   midi.makeInputHandler(0xB0, LaunchpadProMK3.row2[5], (channel, control, value, status, _group) => {
     if (value !== 0) { LaunchpadProMK3.selectPage(5); }
   });
-  // select page 7
-  midi.makeInputHandler(0xB0, LaunchpadProMK3.row2[6], (channel, control, value, status, _group) => {
-    if (value !== 0) { LaunchpadProMK3.selectPage(6); }
-  });
 
-
-  // shift;press and hold to access alternate functions for other pads
-  midi.makeInputHandler(0xB0, LaunchpadProMK3.row2[7], (channel, control, value, status) => {
+  // toggle split cue
+  midi.makeInputHandler(0xB0, LaunchpadProMK3.row2[7], (channel, control, value, status, _group) => {
     if (value !== 0) {
-      LaunchpadProMK3.shift = 1;
-      LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[7], 0x40, 0x7F, 0x7F);
-      DEBUG("# shift on", C.G);
-    } else if (value === 0) {
-      LaunchpadProMK3.shift = 0;
-      LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[7], 0x00, 0x66, 0x7F);
-      DEBUG("# shift off", C.G);
+      // Check if UnVol system is active
+      if (LaunchpadProMK3.splitCueUnVol) {
+        // UnVol is active - turn off the cue and reset both buttons
+        LaunchpadProMK3.splitCueUnVol = 0;
+        
+        // Turn off cue by restoring original states but keeping headMix at current value
+        engine.setValue("[Master]", "headSplit", LaunchpadProMK3.splitCueUnVolPrevSplit);
+        LaunchpadProMK3.splitCue = LaunchpadProMK3.splitCueUnVolPrevSplit; // Update local state
+        
+        // Reset both buttons to default colors
+        LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[6], 0x10, 0x10, 0x10); // Button 6 default
+        if (LaunchpadProMK3.splitCueUnVolPrevSplit) {
+          LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[7], 0x20, 0x35, 0x7F); // Button 7 split enabled
+        } else {
+          LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[7], 0x10, 0x10, 0x10); // Button 7 split disabled
+        }
+        
+        DEBUG("UnVol system deactivated via button 7 - cue turned off", C.Y);
+      } else {
+        // Normal split cue toggle behavior
+        LaunchpadProMK3.toggleSplitCue();
+      }
     }
   });
-  LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[7], 0x00, 0x66, 0x7F);
+  if (engine.getValue("[Master]","headSplit")) {
+    LaunchpadProMK3.splitCue = 1;
+    LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[7], 0x20, 0x35, 0x7F);
+  } else {
+    LaunchpadProMK3.splitCue = 0;
+    LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[7], 0x10, 0x10, 0x10);
+  }
+
+  // toggle split cue volume switch
+  midi.makeInputHandler(0xB0, LaunchpadProMK3.row2[6], (channel, control, value, status, _group) => {
+    if (value !== 0) { 
+      LaunchpadProMK3.toggleSplitCueUnVol();
+        }
+  });
+
+  // Initialize the enhanced UnVol system - default to off regardless of headSplit state
+  LaunchpadProMK3.splitCueUnVol = 0;
+  LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[6], 0x10, 0x10, 0x10); // Button 6 default off
 
 
   // pop and pull hotcue info for the ability to undo and redo
@@ -617,7 +644,70 @@ LaunchpadProMK3.initExtras = function () {
   // midi.sendShortMsg(0x80, 0x5A, 0x00);
 }
 
+  // toggle split cue
+  LaunchpadProMK3.toggleSplitCue = function () {
+    LaunchpadProMK3.splitCue = engine.getValue("[Master]", "headSplit");
+    DEBUG("toggleSplitCue " + LaunchpadProMK3.splitCue, C.G);
+    if (LaunchpadProMK3.splitCue) {
+      engine.setValue("[Master]", "headSplit", 0);
+      LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[7], 0x10, 0x10, 0x10);
+    } else {
+      engine.setValue("[Master]", "headSplit", 1);
+      LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[7], 0x20, 0x35, 0x7F);
+    }
+  }
 
+  LaunchpadProMK3.toggleSplitCueUnVol = function () {
+    // Enhanced UnVol system that works with headSplit enabled
+    if (!LaunchpadProMK3.splitCueUnVol) {
+      // Activating UnVol system
+      LaunchpadProMK3.splitCueUnVol = 1;
+      
+      // Store current states
+      LaunchpadProMK3.splitCueUnVolPrev = engine.getValue("[Master]", "headMix");
+      LaunchpadProMK3.splitCueUnVolPrevSplit = engine.getValue("[Master]", "headSplit");
+      
+      // If headSplit was enabled, temporarily turn it off
+      if (LaunchpadProMK3.splitCueUnVolPrevSplit) {
+        engine.setValue("[Master]", "headSplit", 0);
+        LaunchpadProMK3.splitCue = 0; // Update local state
+        // Set button colors for headSplit enabled case
+        LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[6], 0x7F, 0x40, 0x00); // Orange
+        LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[7], 0x00, 0x00, 0x7F); // Deep blue
+      } else {
+        // Original behavior for headSplit disabled case
+        engine.setValue("[Master]", "headSplit", 1);
+        LaunchpadProMK3.splitCue = 1; // Update local state
+        LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[6], 0x7F, 0x7F, 0x7F); // White
+        LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[7], 0x20, 0x35, 0x7F); // Normal split cue color
+      }
+      
+      // Set headMix to full cue
+      engine.setValue("[Master]", "headMix", 1);
+      
+    } else {
+      // Deactivating UnVol system
+      LaunchpadProMK3.splitCueUnVol = 0;
+      
+      // Restore original states
+      engine.setValue("[Master]", "headSplit", LaunchpadProMK3.splitCueUnVolPrevSplit);
+      engine.setValue("[Master]", "headMix", LaunchpadProMK3.splitCueUnVolPrev);
+      LaunchpadProMK3.splitCue = LaunchpadProMK3.splitCueUnVolPrevSplit; // Update local state
+      
+      // Restore normal button colors
+      if (LaunchpadProMK3.splitCueUnVolPrevSplit) {
+        // headSplit was originally enabled
+        LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[6], 0x10, 0x10, 0x10); // Default off
+        LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[7], 0x20, 0x35, 0x7F); // Normal split cue enabled
+      } else {
+        // headSplit was originally disabled
+        LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[6], 0x10, 0x10, 0x10); // Default off
+        LaunchpadProMK3.sendRGB(LaunchpadProMK3.row2[7], 0x10, 0x10, 0x10); // Normal split cue disabled
+      }
+    }
+    
+    DEBUG("toggleSplitCueUnVol " + LaunchpadProMK3.splitCueUnVol + " (headSplit originally: " + LaunchpadProMK3.splitCueUnVolPrevSplit + ")", C.G);
+  }
 
 // MARK: init Deck obj
 LaunchpadProMK3.Deck = function (deckNum) {
