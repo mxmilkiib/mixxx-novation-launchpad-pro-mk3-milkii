@@ -367,7 +367,9 @@ LaunchpadProMK3.initVars = function () {
   })
 
   LaunchpadProMK3.totalDecks = Object.keys(LaunchpadProMK3.deck.config).length;
-  LaunchpadProMK3.totalDeckHotcuePads = 64 / LaunchpadProMK3.totalDecks;
+  // Separate variables: total hotcues vs grid display 
+  LaunchpadProMK3.totalDeckHotcuePadsShown = 64 / LaunchpadProMK3.totalDecks; // Grid display calculation (16 per deck for 4 decks)
+  LaunchpadProMK3.totalDeckHotcueButtons = 32; // Total hotcue buttons per deck
 
   // full brightness LED colour is confusing
   // these set how bright the LEDs are for loaded and unloaded decks
@@ -393,6 +395,9 @@ LaunchpadProMK3.initVars = function () {
 
   // Track if "keep playing" mode is active (when row1[2] or row1[3] is pressed)
   LaunchpadProMK3.keepPlayingMode = false;
+
+  // Hotcue bank switching system (page 0 only)
+  LaunchpadProMK3.hotcueBankActive = 1; // Current bank: 1 (hotcues 1-16) or 2 (hotcues 17-32)
 
 
   // initialize bpmFlashStep object for all pads (11 through 88)
@@ -449,6 +454,44 @@ LaunchpadProMK3.initExtras = function () {
   // LaunchpadProMK3.sendRGB(LaunchpadProMK3.row1[6], LaunchpadProMK3.hexToRGB(LaunchpadProMK3.deck.config["4"].colour)); // bright
   // LaunchpadProMK3.sendRGB(LaunchpadProMK3.row1[7], LaunchpadProMK3.hexToRGB(LaunchpadProMK3.deck.config["4"].colour)); // bright
 
+
+  // shift;press and hold to access alternate functions for other pads
+  midi.makeInputHandler(0xB0, LaunchpadProMK3.row0[7], (channel, control, value, status) => {
+    if (value !== 0) {
+      LaunchpadProMK3.shift = 1;
+      LaunchpadProMK3.sendRGB(LaunchpadProMK3.row0[7], 0x40, 0x7F, 0x7F);
+      DEBUG("# shift on", C.G);
+    } else if (value === 0) {
+      LaunchpadProMK3.shift = 0;
+      LaunchpadProMK3.sendRGB(LaunchpadProMK3.row0[7], 0x00, 0x66, 0x7F);
+      DEBUG("# shift off", C.G);
+    }
+  });
+  LaunchpadProMK3.sendRGB(LaunchpadProMK3.row0[7], 0x00, 0x66, 0x7F);
+
+  // Hotcue bank switching for page 0 only (row0[3] and row0[4])
+  // Bank 1 (hotcues 1-16) selector - row0[3]
+  midi.makeInputHandler(0xB0, LaunchpadProMK3.row0[3], (channel, control, value, status) => {
+    if (value !== 0 && LaunchpadProMK3.currentPage === 0) {
+      LaunchpadProMK3.hotcueBankActive = 1;
+      LaunchpadProMK3.updateHotcueBankLights();
+      LaunchpadProMK3.updateHotcuePage(); // Refresh hotcue page to show bank 1
+      DEBUG("Hotcue bank switched to 1 (hotcues 1-16)", C.G);
+    }
+  });
+  
+  // Bank 2 (hotcues 17-32) selector - row0[4]  
+  midi.makeInputHandler(0xB0, LaunchpadProMK3.row0[4], (channel, control, value, status) => {
+    if (value !== 0 && LaunchpadProMK3.currentPage === 0) {
+      LaunchpadProMK3.hotcueBankActive = 2;
+      LaunchpadProMK3.updateHotcueBankLights();
+      LaunchpadProMK3.updateHotcuePage(); // Refresh hotcue page to show bank 2
+      DEBUG("Hotcue bank switched to 2 (hotcues 17-32)", C.G);
+    }
+  });
+
+  // Initialize hotcue bank lights
+  LaunchpadProMK3.updateHotcueBankLights();
 
   // select page 1
   midi.makeInputHandler(0xB0, LaunchpadProMK3.row2[0], (channel, control, value, status, _group) => {
@@ -733,10 +776,10 @@ LaunchpadProMK3.Deck = function (deckNum) {
   this.deckOrderIndex = LaunchpadProMK3.deck.config[deckNum].order;
   DEBUG("Deck(" + C.O + deckNum + C.RE + ") this.deckOrderIndex " + C.O + this.deckOrderIndex + C.RE + " (via LaunchpadProMK3.deck.config[deckNum].order)")
   // what pad is the first of the set the deck will manage?
-  this.deckMainSliceStartIndex = (this.deckOrderIndex - 1) * LaunchpadProMK3.totalDeckHotcuePads;
+  this.deckMainSliceStartIndex = (this.deckOrderIndex - 1) * LaunchpadProMK3.totalDeckHotcuePadsShown;
   DEBUG("Deck(" + C.O + deckNum + C.RE + ") this.deckMainSliceStartIndex " + C.O + this.deckMainSliceStartIndex)
   // what is the set of main grid pads this deck will manage?
-  this.pads = LaunchpadProMK3.mainpadAddresses.slice(this.deckMainSliceStartIndex, this.deckMainSliceStartIndex + LaunchpadProMK3.totalDeckHotcuePads);
+  this.pads = LaunchpadProMK3.mainpadAddresses.slice(this.deckMainSliceStartIndex, this.deckMainSliceStartIndex + LaunchpadProMK3.totalDeckHotcuePadsShown);
   DEBUG("Deck(" + C.O + deckNum + C.RE + ") this.pads " + C.O + this.pads + C.RE + " (" + this.deckMainSliceStartIndex + "-" + (this.deckMainSliceStartIndex + 16) + ")")
   // save just first and last pad number for quick reference later
   this.padsFirst = this.pads[0];
@@ -761,14 +804,15 @@ LaunchpadProMK3.Deck = function (deckNum) {
 
   channel = "[Channel" + deckNum + "]";
 
-  // either 16 or 32
-  // for the whole number of hotcues this deck will have..
+  // Create hotcue buttons for all 32 hotcues (both banks)
   // MARK: Deck main pad init
-  for (let i = 1; i <= LaunchpadProMK3.totalDeckHotcuePads; i += 1) {
+  for (let i = 1; i <= LaunchpadProMK3.totalDeckHotcueButtons; i += 1) {
     color_obj = "";
     this.i = i;
-    let padAddress = this.pads[i - 1];
-    // give the hotcue a number
+    // Calculate pad address: only 16 physical pads, so map both banks to same pads
+    let padGridIndex = (i - 1) % LaunchpadProMK3.totalDeckHotcuePadsShown; // 0-15 for display grid
+    let padAddress = this.pads[padGridIndex];
+    // give the hotcue a number (1-32)
     let hotcueNum = i;
     this.deckRgb = LaunchpadProMK3.darkenRGBColour(LaunchpadProMK3.hexToRGB(this.deckColour), LaunchpadProMK3.deckUnloadedDimscale);
     LaunchpadProMK3.sendRGB(padAddress, this.deckRgb[0], this.deckRgb[1], this.deckRgb[2]);
@@ -796,7 +840,10 @@ LaunchpadProMK3.Deck = function (deckNum) {
             DEBUG("Deck(" + C.O + deckNum + C.RE + ") (input): no shift..  value " + C.O + value);
             // is this a note down or note up event?
             if (value !== 0) {
-              DEBUG("Deck(" + C.O + deckNum + C.G + ") (input): deckNum" + C.O + deckNum + C.RE + "/" + C.O + this.currentDeck + C.RE + ",  i " + C.O + i + C.RE + ",  padAddress " + C.O + padAddress + C.RE + "/" + C.O + "0x" + padAddress.toString(16).padStart(2, "0").toUpperCase() + C.RE + "   hotcueNum " + C.O + hotcueNum, C.G, 0, 1);
+              // Calculate actual hotcue number based on current bank and pad position
+              let bankOffset = (LaunchpadProMK3.hotcueBankActive - 1) * LaunchpadProMK3.totalDeckHotcuePadsShown; // 0 for bank 1, 16 for bank 2
+              let actualHotcueNum = bankOffset + padGridIndex + 1; // 1-16 for bank 1, 17-32 for bank 2
+              DEBUG("Deck(" + C.O + deckNum + C.G + ") (input): deckNum" + C.O + deckNum + C.RE + "/" + C.O + this.currentDeck + C.RE + ",  padGridIndex " + C.O + padGridIndex + C.RE + ",  bankOffset " + C.O + bankOffset + C.RE + ",  padAddress " + C.O + padAddress + C.RE + "/" + C.O + "0x" + padAddress.toString(16).padStart(2, "0").toUpperCase() + C.RE + "   actualHotcueNum " + C.O + actualHotcueNum, C.G, 0, 1);
               
               // Check if keep playing mode is active
               if (LaunchpadProMK3.keepPlayingMode) {
@@ -809,13 +856,13 @@ LaunchpadProMK3.Deck = function (deckNum) {
               }
               
               // activate creation trigger
-              engine.setValue(this.currentDeck, "hotcue_" + hotcueNum + "_activate", 1)
+              engine.setValue(this.currentDeck, "hotcue_" + actualHotcueNum + "_activate", 1)
               // set new last hotcue channel
               LaunchpadProMK3.lastHotcueChannel = this.currentDeck;
               // add new entry to undo list
               DEBUG(LaunchpadProMK3.lastHotcue.slice(-1))
               // construct name of control target
-              hotcueName = "hotcue_" + (hotcueNum)
+              hotcueName = "hotcue_" + (actualHotcueNum)
               DEBUG(hotcueName)
               // will this hotcue be the same as the last hotcue?
               // color_object = "";
@@ -826,16 +873,23 @@ LaunchpadProMK3.Deck = function (deckNum) {
             } else if (value === 0) {
               // Only deactivate if keep playing mode is not active
               if (!LaunchpadProMK3.keepPlayingMode) {
-                engine.setValue(this.currentDeck, "hotcue_" + hotcueNum + "_activate", 0)
+                // Calculate actual hotcue number for note release
+                let bankOffset = (LaunchpadProMK3.hotcueBankActive - 1) * LaunchpadProMK3.totalDeckHotcuePadsShown;
+                let actualHotcueNum = bankOffset + padGridIndex + 1;
+                engine.setValue(this.currentDeck, "hotcue_" + actualHotcueNum + "_activate", 0)
               }
             }
             DEBUG("Deck(" + C.O + deckNum + C.RE + ") (input): LaunchpadProMK3.lastHotcue:  " + C.O + LaunchpadProMK3.lastHotcue);
 
-            /// if shift is pressed: Hotcue Deletion
-            if (LaunchpadProMK3.shift === 1) {
-              DEBUG("Deck(" + C.O + deckNum + C.RE + ") (input): shift, hotcue clear " + C.RE + hotcueNum + C.G + " on " + C.RE + this.currentDeck, C.G);
+          /// if shift is pressed: Hotcue Deletion
+          } else if (LaunchpadProMK3.shift === 1) {
+            if (value !== 0) {
+              // Calculate actual hotcue number for clearing
+              let bankOffset = (LaunchpadProMK3.hotcueBankActive - 1) * LaunchpadProMK3.totalDeckHotcuePadsShown;
+              let actualHotcueNum = bankOffset + padGridIndex + 1;
+              DEBUG("Deck(" + C.O + deckNum + C.RE + ") (input): shift, hotcue clear " + C.RE + actualHotcueNum + C.G + " on " + C.RE + this.currentDeck, C.G);
               // helper function to toggle hotcue clear control on then off
-              script.triggerControl(this.currentDeck, "hotcue_" + hotcueNum + "_clear", 50);
+              script.triggerControl(this.currentDeck, "hotcue_" + actualHotcueNum + "_clear", 50);
               // has to be full page refresh because a track could be on two decks
               LaunchpadProMK3.updateHotcuePage();
               DEBUG("Deck(" + C.O + deckNum + C.RE + ") (input): leaving hotcue page btton press..", C.R, 0, 1);
@@ -960,13 +1014,19 @@ LaunchpadProMK3.Deck = function (deckNum) {
     engine.makeConnection(channel, "hotcue_" + hotcueNum + "_status", (value) => {
       //if (value === 0) { return }
       if (LaunchpadProMK3.currentPage === 0 && value !== 0) {
-        let deckColour = this.deckColour // Get the deck color
-        let deckRgb = LaunchpadProMK3.hexToRGB(deckColour);
-        // let deckDimUnloaded = LaunchpadProMK3.darkenRGBColour(deckRgb, LaunchpadProMK3.deckUnloadedDimscale);
-        let deckDimUnloaded = LaunchpadProMK3.darkenRGBColour(deckRgb, LaunchpadProMK3.deckLoadedInactiveDimscale);
+        // Only update the pad if this hotcue is in the currently active bank
+        let currentBankStart = (LaunchpadProMK3.hotcueBankActive - 1) * LaunchpadProMK3.totalDeckHotcuePadsShown + 1;
+        let currentBankEnd = LaunchpadProMK3.hotcueBankActive * LaunchpadProMK3.totalDeckHotcuePadsShown;
+        
+        if (hotcueNum >= currentBankStart && hotcueNum <= currentBankEnd) {
+          let deckColour = this.deckColour // Get the deck color
+          let deckRgb = LaunchpadProMK3.hexToRGB(deckColour);
+          // let deckDimUnloaded = LaunchpadProMK3.darkenRGBColour(deckRgb, LaunchpadProMK3.deckUnloadedDimscale);
+          let deckDimUnloaded = LaunchpadProMK3.darkenRGBColour(deckRgb, LaunchpadProMK3.deckLoadedInactiveDimscale);
 
-        LaunchpadProMK3.sendRGB(padAddress, deckDimUnloaded[0], deckDimUnloaded[1], deckDimUnloaded[2]);
-        DEBUG(">> makeConnection " + C.C + "hotcue_X_status" + C.RE + "   deckColour hex " + C.O + "#" + deckColour.toString(16) + C.RE + "   deckRgb " + C.O + deckRgb + C.RE + "   deckDimUnloaded " + C.O + deckDimUnloaded, C.G, 1);
+          LaunchpadProMK3.sendRGB(padAddress, deckDimUnloaded[0], deckDimUnloaded[1], deckDimUnloaded[2]);
+          DEBUG(">> makeConnection " + C.C + "hotcue_X_status" + C.RE + "   hotcueNum " + C.O + hotcueNum + C.RE + "   deckColour hex " + C.O + "#" + deckColour.toString(16) + C.RE + "   deckRgb " + C.O + deckRgb + C.RE + "   deckDimUnloaded " + C.O + deckDimUnloaded, C.G, 1);
+        }
       }
       if (value === 0) {
 
@@ -1298,6 +1358,33 @@ LaunchpadProMK3.trackWithIntroOutro = function (value, deckNum, padAddress) {
   }
 };
 
+// Update hotcue bank indicator lights (page 0 only)
+// MARK: p0 updateHotcueBankLights()
+LaunchpadProMK3.updateHotcueBankLights = function () {
+  if (LaunchpadProMK3.currentPage !== 0) {
+    // Turn off bank lights when not on page 0
+    LaunchpadProMK3.sendRGB(LaunchpadProMK3.row0[3], 0x00, 0x00, 0x00);
+    LaunchpadProMK3.sendRGB(LaunchpadProMK3.row0[4], 0x00, 0x00, 0x00);
+    return;
+  }
+  
+  // Pastel leaf green colors with different brightness for selection
+  const pastelLeafGreenDim = [0x40, 0x7F, 0x40];   // Dimmer green for inactive bank
+  const pastelLeafGreenBright = [0x7F, 0xFF, 0x7F]; // Brighter green for active bank
+  
+  if (LaunchpadProMK3.hotcueBankActive === 1) {
+    // Bank 1 active (hotcues 1-16)
+    LaunchpadProMK3.sendRGB(LaunchpadProMK3.row0[3], pastelLeafGreenBright[0], pastelLeafGreenBright[1], pastelLeafGreenBright[2]);
+    LaunchpadProMK3.sendRGB(LaunchpadProMK3.row0[4], pastelLeafGreenDim[0], pastelLeafGreenDim[1], pastelLeafGreenDim[2]);
+  } else {
+    // Bank 2 active (hotcues 17-32)  
+    LaunchpadProMK3.sendRGB(LaunchpadProMK3.row0[3], pastelLeafGreenDim[0], pastelLeafGreenDim[1], pastelLeafGreenDim[2]);
+    LaunchpadProMK3.sendRGB(LaunchpadProMK3.row0[4], pastelLeafGreenBright[0], pastelLeafGreenBright[1], pastelLeafGreenBright[2]);
+  }
+  
+  DEBUG("updateHotcueBankLights: Bank " + LaunchpadProMK3.hotcueBankActive + " active", C.G);
+};
+
 
 //// Multiple pad light functions
 
@@ -1407,7 +1494,7 @@ LaunchpadProMK3.gradientSetup = function (deck, altpos, gradStartA, gradEndA, gr
   DEBUG("gradientSetup: deck " + C.O + deck + C.RE + "   altpos " + C.O + altpos + C.RE + "   deckColour " + C.O + "#" + deckColour + C.RE + "   deckRgb " + C.O + deckRgb, C.G, 1);
   const channel = `[Channel${deck}]`;
   const deckLoaded = engine.getValue(channel, "track_loaded");
-  const gradLength = LaunchpadProMK3.totalDeckHotcuePads / 2
+  const gradLength = LaunchpadProMK3.totalDeckHotcuePadsShown / 2
   const gradA = LaunchpadProMK3.gradientCalculate(gradStartA, gradEndA, gradLength);
   const gradB = LaunchpadProMK3.gradientCalculate(gradStartB, gradEndB, gradLength);
   const gradBoth = gradA.concat(gradB);
@@ -1638,6 +1725,7 @@ LaunchpadProMK3.selectPage = function (page) {
 DEBUG("########### selectPage before if: page " + C.O + page, C.R);
   if (page === 0) {
     LaunchpadProMK3.updateHotcuePage();
+    LaunchpadProMK3.updateHotcueBankLights(); // Ensure bank lights are shown when switching to page 0
     DEBUG("########### selectPage inside if2: page " + C.O + page, C.R);
     for (let deckNum = 1; deckNum <= LaunchpadProMK3.totalDecks; deckNum++) {
       LaunchpadProMK3.setupPage0SidepadFlashing(deckNum);
@@ -1677,21 +1765,26 @@ LaunchpadProMK3.updateHotcueLights = function (deckNum) {
   const deckLoaded = engine.getValue(channel, "track_loaded");
   let colourSpecMulti = [];
 
-  // go through the hotcues one by one and make a longer multi-pad midi msg
-  for (let i = 1; i <= LaunchpadProMK3.totalDeckHotcuePads; i += 1) {
+  // go through the hotcues for the current bank and make a longer multi-pad midi msg
+  for (let i = 1; i <= LaunchpadProMK3.totalDeckHotcuePadsShown; i += 1) {
     let padAddress = LaunchpadProMK3.decks[deckNum].pads[i - 1];
     if (LaunchpadProMK3.currentPage === 6) { padAddress = LaunchpadProMK3.decks[4].pads[i - 1]; }
-    DEBUG("updateHotcueLights(" + C.O + deckNum + C.O + ") pad " + C.O + padAddress + C.RE + "   deckLoaded " + C.O + deckLoaded + C.RE + "   deckRgb " + C.O + deckRgb + C.RE)
+    
+    // Calculate actual hotcue number based on current bank
+    let bankOffset = (LaunchpadProMK3.hotcueBankActive - 1) * LaunchpadProMK3.totalDeckHotcuePadsShown;
+    let actualHotcueNum = bankOffset + i; // 1-16 for bank 1, 17-32 for bank 2
+    
+    DEBUG("updateHotcueLights(" + C.O + deckNum + C.O + ") pad " + C.O + padAddress + C.RE + "   bank " + C.O + LaunchpadProMK3.hotcueBankActive + C.RE + "   actualHotcueNum " + C.O + actualHotcueNum + C.RE + "   deckLoaded " + C.O + deckLoaded + C.RE + "   deckRgb " + C.O + deckRgb + C.RE)
     let padRgb;
     if (deckLoaded !== 1) {
       padRgb = LaunchpadProMK3.darkenRGBColour(deckRgb, LaunchpadProMK3.deckUnloadedDimscale);
     }
     if (deckLoaded === 1) {
       // is the hotcue enabled?
-      const hotcueEnabled = engine.getValue(channel, `hotcue_${i}_status`);
+      const hotcueEnabled = engine.getValue(channel, `hotcue_${actualHotcueNum}_status`);
       if (hotcueEnabled === 1) {
         // deck loaded, hotcue exists, if so, get it's colour
-        const hotcueColour = engine.getValue(channel, `hotcue_${i}_color`);
+        const hotcueColour = engine.getValue(channel, `hotcue_${actualHotcueNum}_color`);
         // const debugHotcueEnabled = "   hotcueEnabled " + C.O + hotcueEnabled + C.RE + "   hotcueColour " + C.O + "#" + hotcueColour.toString(16).padStart(6, "0").toUpperCase(); // UNUSED VARIABLE
         padRgb = LaunchpadProMK3.darkenRGBColour(LaunchpadProMK3.hexToRGB(hotcueColour), LaunchpadProMK3.deckLoadedActiveDimscale);
         DEBUG("padRgb " + C.O + padRgb + C.RE)
@@ -1769,6 +1862,9 @@ LaunchpadProMK3.updateHotcuePage = function (deck) {
       LaunchpadProMK3.updateHotcueLights(deck);
       DEBUG("updateHotcuePage: ### end updating deck", C.R, 0, 1);
     }
+    
+    // Update hotcue bank lights when page is updated
+    LaunchpadProMK3.updateHotcueBankLights();
   }
 };
 
@@ -1831,16 +1927,14 @@ LaunchpadProMK3.redoLastHotcue = function () {
 
 // MARK: p0 create4LeadupDropHotcues()
 var leadupCues = {
-  // "1": { control: "beatjump_128_backward", colour: 0x1DBEBD }, //teal
-  "1": { control: "beatjump_128_backward", colour: 0x006838  }, //dark green
-  // "2": { control: "beatjump_64_forward", colour: 0x4eb648 }, //green
-  "2": { control: "beatjump_64_forward", colour: 0x006838 }, //dark green
-  // "3": { control: "beatjump_32_forward", colour: 0xf8d200 }, //yellow
-  "3": { control: "beatjump_32_forward", colour: 0xff8000 }, //orange
-  "4": { control: "beatjump_16_forward", colour: 0xff8000 }, //orange
-  "5": { control: "beatjump_16_forward", colour: 0xc71136 }, //red
-  "6": { control: "beatjump_128_forward", colour: 0x5C3F97 }, //purple
-  // "7": { control: "beatjump_128_backward" } //return
+  "1": { control: "beatjump_256_backward", colour: 0x006838  }, // -265, dark green
+  "2": { control: "beatjump_64_forward", colour: 0x006838  },   // -192, dark green
+  "3": { control: "beatjump_64_forward", colour: 0x006838  },   // -128, dark green
+  "4": { control: "beatjump_64_forward", colour: 0x006838  },   // -64,  dark green
+  "5": { control: "beatjump_32_forward", colour: 0xff8000 },    // -32,  orange
+  "6": { control: "beatjump_16_forward", colour: 0xff8000 },    // -16,  orange
+  "7": { control: "beatjump_16_forward", colour: 0xc71136 },    // drop, red
+  "8": { control: "beatjump_128_forward", colour: 0x5C3F97 },   // +128, purple
 }
 
 
@@ -1850,7 +1944,7 @@ function isCloseEnough(array, num, precision = 2) {
 
 
 LaunchpadProMK3.create4LeadupDropHotcues = function (deck, value) {
-  DEBUG(`create4LeadupDropHotcues: ## create hotcues  ${C.Y} -128 -64 -32 -16 ${C.R}drop ${C.RE}on ${C.O}${deck}`, C.G, 2);
+  DEBUG(`create4LeadupDropHotcues: ## create hotcues  ${C.Y} -192 -128 -64 -32 -16 ${C.R}drop ${C.RE}on ${C.O}${deck}`, C.G, 2);
   if (value === 0 || value === undefined) return 0;
   const group = `[Channel${deck}]`;
   // what time is it right now?
@@ -1880,13 +1974,22 @@ LaunchpadProMK3.create4LeadupDropHotcues = function (deck, value) {
     DEBUG("number " + C.O + number[1].control)
     const control = number[1].control
     const colour = number[1].colour
-    if (colour === undefined) { engine.setValue(group, control, originalPlayPosition); return }
+    // if (colour === undefined) { engine.setValue(group, control, originalPlayPosition); return }
     DEBUG(`control ${C.O}${control}${C.RE}   colour ${C.O}#${colour.toString(16)}`, C.G, 1)
-    // perform it
-    engine.setValue(group, control, 1)
+    // perform it - handle multiple controls separated by semicolon
+    const controls = control.split(';');
+    DEBUG(`create4LeadupDropHotcues: controls ${C.O}${controls}`, C.G, 1)
+    for (const singleControl of controls) {
+      DEBUG(`create4LeadupDropHotcues: singleControl ${C.O}${singleControl}`, C.G, 1)
+      const trimmedControl = singleControl.trim();
+      if (trimmedControl) {
+        engine.setValue(group, trimmedControl, 1);
+        DEBUG(`create4LeadupDropHotcues: ${C.O}${trimmedControl}${C.RE}`, C.G, 1)
+        LaunchpadProMK3.sleep(100);
+      }
+    }
     // pause so the jump takes effect
     // how far through the track is the playhead now, between 0 and 1
-    LaunchpadProMK3.sleep(100);
     const playPosition = engine.getValue(group, "playposition");
     // if it's before 0, aka the start of the track then..
     DEBUG("create4LeadupDropHotcues: playPosition " + C.O + playPosition)
@@ -2854,7 +2957,7 @@ LaunchpadProMK3.setupBeatjumpFlashing = function (deckNum) {
                 let gradEndA = deckRgb;
                 let gradStartB = [20, 20, 127];
                 let gradEndB = deckRgb;
-                let gradLength = LaunchpadProMK3.totalDeckHotcuePads / 2;
+                let gradLength = LaunchpadProMK3.totalDeckHotcuePadsShown / 2;
                 let gradA = LaunchpadProMK3.gradientCalculate(gradStartA, gradEndA, gradLength);
                 let gradB = LaunchpadProMK3.gradientCalculate(gradStartB, gradEndB, gradLength);
                 let gradBoth = gradA.concat(gradB);
@@ -2865,10 +2968,15 @@ LaunchpadProMK3.setupBeatjumpFlashing = function (deckNum) {
               
               // Flash the pad (darken it) - will stay dimmed until next beat
               let originalColor = LaunchpadProMK3.decks[deckNum].beatjumpOriginalColors[padAddress];
-              let flashColor = LaunchpadProMK3.darkenRGBColour(originalColor, 0.85); // Darken to 85% (very subtle - 15% dimming)
+              
+              // Check if this is the 16-beat pad on a 16-beat boundary for darker flash
+              let is16BeatPadOn16Beat = (beatAmount === 16) && (LaunchpadProMK3.decks[deckNum].beatjumpBeatCounter % 16 === 0);
+              let flashRatio = is16BeatPadOn16Beat ? 0.30 : 0.60; // Much darker only for 16-beat pad on 16-beat markers
+              let flashColor = LaunchpadProMK3.darkenRGBColour(originalColor, flashRatio);
               LaunchpadProMK3.sendRGB(padAddress, flashColor[0], flashColor[1], flashColor[2]);
               
-              DEBUG("setupBeatjumpFlashing: Deck " + C.O + deckNum + C.RE + " pad " + C.O + padAddress + C.RE + " flashing (beat " + C.O + LaunchpadProMK3.decks[deckNum].beatjumpBeatCounter + C.RE + " % " + C.O + beatAmount + C.RE + " = 0)", C.G);
+              let beatMarkerInfo = is16BeatPadOn16Beat ? " [16-BEAT PAD DARK FLASH]" : "";
+              DEBUG("setupBeatjumpFlashing: Deck " + C.O + deckNum + C.RE + " pad " + C.O + padAddress + C.RE + " flashing (beat " + C.O + LaunchpadProMK3.decks[deckNum].beatjumpBeatCounter + C.RE + " % " + C.O + beatAmount + C.RE + " = 0)" + beatMarkerInfo, C.G);
             } else {
               // Restore original color if this beat doesn't trigger a flash
               if (LaunchpadProMK3.decks[deckNum].beatjumpOriginalColors[padAddress]) {
@@ -2909,3 +3017,22 @@ LaunchpadProMK3.resetKeepPlayingMode = function() {
     LaunchpadProMK3.sendRGB(LaunchpadProMK3.row1[3], 0x7F, 0x7F, 0x00); // Bright yellow
   }
 };
+
+LaunchpadProMK3.printReadme = function () {
+  DEBUG("", C.RE, 1);
+  DEBUG("┌─── LaunchpadProMK3 Controller Script ───┐", C.C);
+  DEBUG("│ Features:                               │", C.W);
+  DEBUG("│ • Hotcues: 64 pads across 2-4 decks     │", C.W);
+  DEBUG("│ • Intro/Outro markers on sidepads       │", C.W);
+  DEBUG("│ • BPM scaling with visual feedback      │", C.W);
+  DEBUG("│ • Beatjump controls for all decks       │", C.W);
+  DEBUG("│ • Auto hotcue creation (4 leadup+drop)  │", C.W);
+  DEBUG("│ • Deck color-coded interface            │", C.W);
+  DEBUG("│ • Split cue & headphone controls        │", C.W);
+  DEBUG("│ Pages: Hotcues | BeatJump | BPM | Loops │", C.G);
+  DEBUG("└─── by Milkii ───────────────────────────┘", C.C);
+  DEBUG("", C.RE, 1);
+};
+
+
+
