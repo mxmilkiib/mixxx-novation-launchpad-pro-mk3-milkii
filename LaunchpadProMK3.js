@@ -970,19 +970,19 @@ LaunchpadProMK3.Deck = function (deckNum) {
             script.toggleControl(channel, control, 50);
           };
         };
-        //MARK: page 5 loop extra
+
+
+
         // loop
-        if (LaunchpadProMK3.currentPage === 5) {
-          if (value !== 0) {
-            DEBUG("Deck(" + C.O + deckNum + C.G + ") (input): it's loopin extra tools time on page 5", C.G, 1)
-          }
-        } // end loop pages
+        // if (LaunchpadProMK3.currentPage === 5) {
+        //   if (value !== 0) {
+        //     DEBUG("Deck(" + C.O + deckNum + C.G + ") (input): it's loopin extra tools time on page 5", C.G, 1)
+        //   }
+        // } // end loop pages
 
-
-
-        //MARK: page 6 onedeck
+        //MARK: page 5 onedeck
         // one deck
-        if (LaunchpadProMK3.currentPage === 6) {
+        if (LaunchpadProMK3.currentPage === 5) {
           if (value !== 0) {
             DEBUG("Deck(" + C.O + deckNum + C.G + ") (input): one deck time, page 6", C.G, 1)
             if (engine.getValue(this.currentDeck, "track_loaded") === 1) {
@@ -1472,7 +1472,7 @@ LaunchpadProMK3.lightUpRow2 = function () {
   LaunchpadProMK3.sendRGB(row2[3], 127, 110, 127);
   LaunchpadProMK3.sendRGB(row2[4], 127, 110, 127);
   LaunchpadProMK3.sendRGB(row2[5], 127, 110, 127);
-  LaunchpadProMK3.sendRGB(row2[6], 127, 110, 127);
+  // LaunchpadProMK3.sendRGB(row2[6], 127, 110, 127);
   LaunchpadProMK3.sendRGB(row2[0] + LaunchpadProMK3.currentPage, 127, 0, 20);
 };
 
@@ -2586,64 +2586,64 @@ LaunchpadProMK3.updateReverseLoopPage = function () {
 
 
 
-// Sixth page (5)
-// MARK: p5 updateLoopExtrasPage()
-LaunchpadProMK3.updateLoopExtrasPage = function () {
-  if (LaunchpadProMK3.currentPage === 5) {
-    // Preserve all ASCII art exactly as is
-    DEBUG("  ");
-    DEBUG("                             '888              .o8                                                             .dP''Y88b  ", C.M);
-    DEBUG(" oooo  oooo  oo.ooooo.   .oooo888   .oooo.   .o888oo  .ooooo.     oo.ooooo.   .oooo.    .oooooooo  .ooooo.           ]8P' ", C.M);
-    DEBUG(" `888  `888   888' `88b d88' `888  `P  )88b    888   d88' `88b     888' `88b `P  )88b  888' `88b  d88' `88b        <88b.  ", C.M);
-    DEBUG("  888   888   888   888 888   888   .oP'888    888   888ooo888     888   888  .oP'888  888   888  888ooo888         `88b. ", C.M);
-    DEBUG("  888   888   888   888 888   888  d8(  888    888 . 888    .o     888   888 d8(  888  `88bod8P'  888    .o         `88b. ", C.M);
-    DEBUG("  `V88V'V8P'  888bod8P' `Y8bod88P' `Y888''8o   '88'  `Y8bod8P'     888bod8P' `Y888''8o `8oooooo.  `Y8bod8P'    `8bd88P'   ", C.M);
-    DEBUG("              888                                                  888                 d'     YD                          ", C.M);
-    DEBUG("             o888o                                                o888o                 'Y88888P'                         ", C.M);
-    DEBUG("  ");
-    DEBUG("### updateLoopExtrasPage()", C.G, 0, 1);
+// // Sixth page (5)
+// // MARK: p5 updateLoopExtrasPage()
+// LaunchpadProMK3.updateLoopExtrasPage = function () {
+//   if (LaunchpadProMK3.currentPage === 5) {
+//     // Preserve all ASCII art exactly as is
+//     DEBUG("  ");
+//     DEBUG("                             '888              .o8                                                            ", C.M);
+//     DEBUG(" oooo  oooo  oo.ooooo.   .oooo888   .oooo.   .o888oo  .ooooo.     oo.ooooo.   .oooo.    .oooooooo  .ooooo.    ", C.M);
+//     DEBUG(" `888  `888   888' `88b d88' `888  `P  )88b    888   d88' `88b     888' `88b `P  )88b  888' `88b  d88' `88b   ", C.M);
+//     DEBUG("  888   888   888   888 888   888   .oP'888    888   888ooo888     888   888  .oP'888  888   888  888ooo888  5", C.M);
+//     DEBUG("  888   888   888   888 888   888  d8(  888    888 . 888    .o     888   888 d8(  888  `88bod8P'  888    .o   ", C.M);
+//     DEBUG("  `V88V'V8P'  888bod8P' `Y8bod88P' `Y888''8o   '88'  `Y8bod8P'     888bod8P' `Y888''8o `8oooooo.  `Y8bod8P'   ", C.M);
+//     DEBUG("              888                                                  888                 d'     YD              ", C.M);
+//     DEBUG("             o888o                                                o888o                 'Y88888P'             ", C.M);
+//     DEBUG("  ");
+//     DEBUG("### updateLoopExtrasPage()", C.G, 0, 1);
 
-    // Absolutely minimal implementation to avoid crashes
-    // Just set a flag and don't attempt to do anything potentially dangerous
-    LaunchpadProMK3.loopExtrasPageActive = true;
+//     // Absolutely minimal implementation to avoid crashes
+//     // Just set a flag and don't attempt to do anything potentially dangerous
+//     LaunchpadProMK3.loopExtrasPageActive = true;
     
-    // Don't clear MIDI handlers or send MIDI messages
-    // Don't attempt any engine connections
-    // This is the most minimal implementation possible to prevent crashes
+//     // Don't clear MIDI handlers or send MIDI messages
+//     // Don't attempt any engine connections
+//     // This is the most minimal implementation possible to prevent crashes
     
-    DEBUG("### end updateLoopExtrasPage", C.R, 1, 2);
-  }
-};
+//     DEBUG("### end updateLoopExtrasPage", C.R, 1, 2);
+//   }
+// };
 
 
 
-LaunchpadProMK3.loopMoveControls = [
-  ///"loop_move",
-  // MARK: p5 loopMoveControls()
-  // Move loop forward by X beats (positive) or backward by X beats (negative).
-  // If a saved loop is currently enabled, the modification is saved to the hotcue slot immediately.
-  //"loop_move_x_forward",
-  // Loop moves forward by X beats. If a saved loop is currently enabled, the modification is saved to the hotcue slot immediately.
-  //"loop_move_x_backward",
-  // Loop moves back by X beats. If a saved loop is currently enabled, the modification is saved to the hotcue slot immediately.
-  "loop_move_1_backward",
-  "loop_move_2_backward",
-  "loop_move_4_backward",
-  "loop_move_8_backward",
-  "loop_move_16_backward",
-  "loop_move_32_backward",
-  "loop_move_64_backward",
-  "loop_move_128_backward",
+// LaunchpadProMK3.loopMoveControls = [
+//   ///"loop_move",
+//   // MARK: p5 loopMoveControls()
+//   // Move loop forward by X beats (positive) or backward by X beats (negative).
+//   // If a saved loop is currently enabled, the modification is saved to the hotcue slot immediately.
+//   //"loop_move_x_forward",
+//   // Loop moves forward by X beats. If a saved loop is currently enabled, the modification is saved to the hotcue slot immediately.
+//   //"loop_move_x_backward",
+//   // Loop moves back by X beats. If a saved loop is currently enabled, the modification is saved to the hotcue slot immediately.
+//   "loop_move_1_backward",
+//   "loop_move_2_backward",
+//   "loop_move_4_backward",
+//   "loop_move_8_backward",
+//   "loop_move_16_backward",
+//   "loop_move_32_backward",
+//   "loop_move_64_backward",
+//   "loop_move_128_backward",
 
-  "loop_move_1_forward",
-  "loop_move_2_forward",
-  "loop_move_4_forward",
-  "loop_move_8_forward",
-  "loop_move_16_forward",
-  "loop_move_32_forward",
-  "loop_move_64_forward",
-  "loop_move_128_forward"
-];
+//   "loop_move_1_forward",
+//   "loop_move_2_forward",
+//   "loop_move_4_forward",
+//   "loop_move_8_forward",
+//   "loop_move_16_forward",
+//   "loop_move_32_forward",
+//   "loop_move_64_forward",
+//   "loop_move_128_forward"
+// ];
 
 
 
@@ -2652,13 +2652,13 @@ LaunchpadProMK3.loopMoveControls = [
 
 LaunchpadProMK3.updateOneDeckPage = function () {
   // MARK: p6 updateOneDeckPage()
-  if (LaunchpadProMK3.currentPage === 6) {
+  if (LaunchpadProMK3.currentPage === 5) {
     DEBUG("  ");
     DEBUG("                              .o8                .                                                              ", C.M);
     DEBUG("                             '888              .o8                                                              ", C.M);
     DEBUG(" oooo  oooo  oo.ooooo.   .oooo888   .oooo.   .o888oo  .ooooo.     oo.ooooo.   .oooo.    .oooooooo  .ooooo.      ", C.M);
     DEBUG(" `888  `888   888' `88b d88' `888  `P  )88b    888   d88' `88b     888' `88b `P  )88b  888' `88b  d88' `88b     ", C.M);
-    DEBUG("  888   888   888   888 888   888   .oP'888    888   888ooo888     888   888  .oP'888  888   888  888ooo888    6", C.M);
+    DEBUG("  888   888   888   888 888   888   .oP'888    888   888ooo888     888   888  .oP'888  888   888  888ooo888    5", C.M);
     DEBUG("  888   888   888   888 888   888  d8(  888    888 . 888    .o     888   888 d8(  888  `88bod8P'  888    .o     ", C.M);
     DEBUG("  `V88V'V8P'  888bod8P' `Y8bod88P' `Y888''8o   '88'  `Y8bod8P'     888bod8P' `Y888''8o `8oooooo.  `Y8bod8P'     ", C.M);
     DEBUG("              888                                                  888                 d'     YD                ", C.M);
