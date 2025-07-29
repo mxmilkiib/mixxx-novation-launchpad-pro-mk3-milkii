@@ -241,6 +241,8 @@ LaunchpadProMK3.init = function () {
   DEBUG("LaunchpadProMK3.selectPage(0)", C.G, 1)
   LaunchpadProMK3.selectPage(0);
 
+  // Print concise readme
+  LaunchpadProMK3.printReadme();
 
   DEBUG("init finished", C.R, 2, 24);
 };
@@ -1038,7 +1040,7 @@ LaunchpadProMK3.Deck = function (deckNum) {
 
 
 
-  ////MARK: Deck sidepads init
+  ////MARK: Deck side pad init
   DEBUG("Deck(" + C.O + deckNum + C.G + ") ### intro/outro sidepads init", C.G);
   this.sideButtons = [];
   DEBUG("Deck(" + C.O + deckNum + C.RE + ") this.deckSidepadAddresses " + C.O + this.deckSidepadAddresses)
@@ -1744,13 +1746,17 @@ DEBUG("########### selectPage before if: page " + C.O + page, C.R);
     LaunchpadProMK3.updateReverseLoopPage();
   }
   else if (page === 5) {
-    LaunchpadProMK3.updateLoopExtrasPage();
-  }
-  else if (page === 6) {
+    // LaunchpadProMK3.updateLoopExtrasPage();
     LaunchpadProMK3.updateOneDeckPage();
-  }   
+  }
+  // else if (page === 6) {
+  // }   
   DEBUG("selectPage: resetting bottom row deck selection buttons for new page..", C.O)
   LaunchpadProMK3.lightUpRow2()
+  
+  // Update bank lights for all page switches (will turn off when not page 0)
+  LaunchpadProMK3.updateHotcueBankLights();
+  
   DEBUG("selectPage: leaving selectPage(" + C.O + page + C.R + ")", C.R, 0, 20)
 };
 
