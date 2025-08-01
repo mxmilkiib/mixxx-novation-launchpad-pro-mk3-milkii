@@ -628,25 +628,57 @@ LaunchpadProMK3.initExtras = function () {
   // TODO currently creation positions are hardcoded
   hotcueCreationButton1 = LaunchpadProMK3.row1[4]
   midi.makeInputHandler(0xB0, hotcueCreationButton1, (channel, control, value, status, _group) => {
-    if (value !== 0) { LaunchpadProMK3.create4LeadupDropHotcues(3, value); }
+    if (value !== 0) { 
+      if (LaunchpadProMK3.shift === 1) {
+        // Shift + Pad 4: Clear all hotcues on deck 3
+        LaunchpadProMK3.clearAllHotcues(3);
+      } else {
+        // Normal function: create leadup/drop hotcues
+        LaunchpadProMK3.create4LeadupDropHotcues(3, value); 
+      }
+    }
   });
   LaunchpadProMK3.sendRGB(hotcueCreationButton1, LaunchpadProMK3.hexToRGB(LaunchpadProMK3.deck.config["3"].colour));
 
   hotcueCreationButton2 = LaunchpadProMK3.row1[5]
   midi.makeInputHandler(0xB0, hotcueCreationButton2, (channel, control, value, status, _group) => {
-    if (value !== 0) { LaunchpadProMK3.create4LeadupDropHotcues(1, value); }
+    if (value !== 0) { 
+      if (LaunchpadProMK3.shift === 1) {
+        // Shift + Pad 5: Clear all hotcues on deck 1
+        LaunchpadProMK3.clearAllHotcues(1);
+      } else {
+        // Normal function: create leadup/drop hotcues
+        LaunchpadProMK3.create4LeadupDropHotcues(1, value); 
+      }
+    }
   });
   LaunchpadProMK3.sendRGB(hotcueCreationButton2, LaunchpadProMK3.hexToRGB(LaunchpadProMK3.deck.config["1"].colour));
 
   hotcueCreationButton3 = LaunchpadProMK3.row1[6]
   midi.makeInputHandler(0xB0, hotcueCreationButton3, (channel, control, value, status, _group) => {
-    if (value !== 0) { LaunchpadProMK3.create4LeadupDropHotcues(2, value); }
+    if (value !== 0) { 
+      if (LaunchpadProMK3.shift === 1) {
+        // Shift + Pad 6: Clear all hotcues on deck 2
+        LaunchpadProMK3.clearAllHotcues(2);
+      } else {
+        // Normal function: create leadup/drop hotcues
+        LaunchpadProMK3.create4LeadupDropHotcues(2, value); 
+      }
+    }
   });
   LaunchpadProMK3.sendRGB(hotcueCreationButton3, LaunchpadProMK3.hexToRGB(LaunchpadProMK3.deck.config["2"].colour));
 
   hotcueCreationButton4 = LaunchpadProMK3.row1[7]
   midi.makeInputHandler(0xB0, hotcueCreationButton4, (channel, control, value, status, _group) => {
-    if (value !== 0) { LaunchpadProMK3.create4LeadupDropHotcues(4, value); }
+    if (value !== 0) { 
+      if (LaunchpadProMK3.shift === 1) {
+        // Shift + Pad 7: Clear all hotcues on deck 4
+        LaunchpadProMK3.clearAllHotcues(4);
+      } else {
+        // Normal function: create leadup/drop hotcues
+        LaunchpadProMK3.create4LeadupDropHotcues(4, value); 
+      }
+    }
   });
   LaunchpadProMK3.sendRGB(hotcueCreationButton4, LaunchpadProMK3.hexToRGB(LaunchpadProMK3.deck.config["4"].colour));
 
@@ -1928,6 +1960,58 @@ LaunchpadProMK3.redoLastHotcue = function () {
   DEBUG("## LaunchpadProMK3.lastHotcue:  " + LaunchpadProMK3.lastHotcue);
   LaunchpadProMK3.updateHotcuePage();
   DEBUG("redoLastHotcue: leaving redoLastHotcue..", C.R, 1, 1)
+};
+
+
+// MARK: p0 clearAllHotcues()
+LaunchpadProMK3.clearAllHotcues = function (deckNum) {
+  DEBUG("clearAllHotcues: ####################### CLEAR ALL HOTCUES on deck " + deckNum, C.R, 1, 1);
+  
+  if (!deckNum || deckNum < 1 || deckNum > LaunchpadProMK3.totalDecks) {
+    DEBUG("clearAllHotcues: Invalid deck number: " + deckNum, C.R);
+    return;
+  }
+  
+  const channel = `[Channel${deckNum}]`;
+  const clearedHotcues = [];
+  
+  // Loop through all 32 hotcues for this deck
+  for (let hotcueNum = 1; hotcueNum <= LaunchpadProMK3.totalDeckHotcueButtons; hotcueNum++) {
+    const hotcueName = "hotcue_" + hotcueNum;
+    
+    // Check if this hotcue exists (has a position set)
+    const hotcuePosition = engine.getValue(channel, hotcueName + "_position");
+    if (hotcuePosition !== -1) {
+      // Calculate the pad address for this hotcue (for undo list)
+      // Only hotcues 1-16 are directly visible on pads, but we track all for undo
+      let padAddress = 0;
+      if (hotcueNum <= LaunchpadProMK3.totalDeckHotcuePadsShown) {
+        const deckObj = LaunchpadProMK3.decks[deckNum];
+        if (deckObj && deckObj.pads) {
+          padAddress = deckObj.pads[hotcueNum - 1] || 0;
+        }
+      }
+      
+      // Clear the hotcue
+      script.triggerControl(channel, hotcueName + "_clear", 50);
+      
+      // Add to cleared hotcues list for undo (in reverse order so undo works correctly)
+      clearedHotcues.unshift([channel, hotcueName, padAddress, deckNum]);
+      
+      DEBUG("clearAllHotcues: Cleared hotcue " + hotcueNum + " on deck " + deckNum);
+    }
+  }
+  
+  // Add all cleared hotcues to the undo stack
+  if (clearedHotcues.length > 0) {
+    // Add all cleared hotcues to the beginning of the undo list
+    LaunchpadProMK3.lastHotcue = clearedHotcues.concat(LaunchpadProMK3.lastHotcue);
+    DEBUG("clearAllHotcues: Added " + clearedHotcues.length + " hotcues to undo list");
+  }
+  
+  // Update the display
+  LaunchpadProMK3.updateHotcuePage();
+  DEBUG("clearAllHotcues: leaving clearAllHotcues..", C.R, 1, 1);
 };
 
 
