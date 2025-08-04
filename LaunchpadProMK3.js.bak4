@@ -435,9 +435,6 @@ LaunchpadProMK3.initVars = function () {
   // Track if the shift button is pressed
   LaunchpadProMK3.shift = 0;
 
-  // Track if row0 pad 8 is being held down (for clear all hotcues modifier)
-  LaunchpadProMK3.row0Pad8Held = false;
-
   // Track if "keep playing" mode is active (when row1[2] or row1[3] is pressed)
   LaunchpadProMK3.keepPlayingMode = false;
 
@@ -690,91 +687,56 @@ LaunchpadProMK3.initExtras = function () {
   LaunchpadProMK3.sendRGB(LaunchpadProMK3.row1[3], 0x7F, 0x7F, 0x00); // Bright yellow by default
 
 
-  // Three-function hotcue controls for row 1 pads 5-8:
-  // - Default: Create multiple hotcues (4 leadup + drop + 3 outro)
-  // - Shift held: Cycle hotcue bank (3-bank system)
-  // - Row0 pad 8 held: Clear all hotcues for the associated deck
-  // Row 1 Pad 4 (user's pad 5): Three-function hotcue control for deck 3
+  // Hotcue pagination controls for row 1 pads (replaces old create/clear functions)
+  // Row 1 Pad 4 (user's pad 5): Hotcue bank cycling for deck 3
   hotcuePaginationButton1 = LaunchpadProMK3.row1[4]
   midi.makeInputHandler(0xB0, hotcuePaginationButton1, (channel, control, value, status, _group) => {
-    if (value !== 0 && LaunchpadProMK3.currentPage === 0) {  // Only on hotcue page
-      if (LaunchpadProMK3.row0Pad8Held) {
-        // Row0 pad 8 held: Clear all hotcues for deck 3
-        LaunchpadProMK3.clearAllHotcues(3);
-        DEBUG("Row1 pad 5 + Row0 pad 8: Clear all hotcues on deck 3", C.R);
-      } else if (LaunchpadProMK3.shift === 1) {
-        // Shift held: Cycle hotcue bank for deck 3
+    if (value !== 0 && LaunchpadProMK3.shift === 1) {
+      // Shift + Pad 4: Cycle hotcue bank for deck 3 (page 0 only)
+      if (LaunchpadProMK3.currentPage === 0) {
         LaunchpadProMK3.cycleHotcueBank(3);
-        DEBUG("Row1 pad 5 + Shift: Cycle hotcue bank for deck 3", C.G);
-      } else {
-        // Normal press: Create multiple hotcues for deck 3
-        LaunchpadProMK3.create4LeadupDropHotcues(3, value);
-        DEBUG("Row1 pad 5: Create multiple hotcues for deck 3", C.Y);
       }
     }
+    // Normal press (without shift) does nothing now - could be used for other functions later
   });
   LaunchpadProMK3.sendRGB(hotcuePaginationButton1, LaunchpadProMK3.hexToRGB(LaunchpadProMK3.deck.config["3"].colour));
 
-  // Row 1 Pad 5 (user's pad 6): Three-function hotcue control for deck 1
+  // Row 1 Pad 5 (user's pad 6): Hotcue bank cycling for deck 1
   hotcuePaginationButton2 = LaunchpadProMK3.row1[5]
   midi.makeInputHandler(0xB0, hotcuePaginationButton2, (channel, control, value, status, _group) => {
-    if (value !== 0 && LaunchpadProMK3.currentPage === 0) {  // Only on hotcue page
-      if (LaunchpadProMK3.row0Pad8Held) {
-        // Row0 pad 8 held: Clear all hotcues for deck 1
-        LaunchpadProMK3.clearAllHotcues(1);
-        DEBUG("Row1 pad 6 + Row0 pad 8: Clear all hotcues on deck 1", C.R);
-      } else if (LaunchpadProMK3.shift === 1) {
-        // Shift held: Cycle hotcue bank for deck 1
+    if (value !== 0 && LaunchpadProMK3.shift === 1) {
+      // Shift + Pad 5: Cycle hotcue bank for deck 1 (page 0 only)
+      if (LaunchpadProMK3.currentPage === 0) {
         LaunchpadProMK3.cycleHotcueBank(1);
-        DEBUG("Row1 pad 6 + Shift: Cycle hotcue bank for deck 1", C.G);
-      } else {
-        // Normal press: Create multiple hotcues for deck 1
-        LaunchpadProMK3.create4LeadupDropHotcues(1, value);
-        DEBUG("Row1 pad 6: Create multiple hotcues for deck 1", C.Y);
       }
     }
+    // Normal press (without shift) does nothing now - could be used for other functions later
   });
   LaunchpadProMK3.sendRGB(hotcuePaginationButton2, LaunchpadProMK3.hexToRGB(LaunchpadProMK3.deck.config["1"].colour));
 
-  // Row 1 Pad 6 (user's pad 7): Three-function hotcue control for deck 2
+  // Row 1 Pad 6 (user's pad 7): Hotcue bank cycling for deck 2
   hotcuePaginationButton3 = LaunchpadProMK3.row1[6]
   midi.makeInputHandler(0xB0, hotcuePaginationButton3, (channel, control, value, status, _group) => {
-    if (value !== 0 && LaunchpadProMK3.currentPage === 0) {  // Only on hotcue page
-      if (LaunchpadProMK3.row0Pad8Held) {
-        // Row0 pad 8 held: Clear all hotcues for deck 2
-        LaunchpadProMK3.clearAllHotcues(2);
-        DEBUG("Row1 pad 7 + Row0 pad 8: Clear all hotcues on deck 2", C.R);
-      } else if (LaunchpadProMK3.shift === 1) {
-        // Shift held: Cycle hotcue bank for deck 2
+    if (value !== 0 && LaunchpadProMK3.shift === 1) {
+      // Shift + Pad 6: Cycle hotcue bank for deck 2 (page 0 only)
+      if (LaunchpadProMK3.currentPage === 0) {
         LaunchpadProMK3.cycleHotcueBank(2);
-        DEBUG("Row1 pad 7 + Shift: Cycle hotcue bank for deck 2", C.G);
-      } else {
-        // Normal press: Create multiple hotcues for deck 2
-        LaunchpadProMK3.create4LeadupDropHotcues(2, value);
-        DEBUG("Row1 pad 7: Create multiple hotcues for deck 2", C.Y);
       }
     }
+    // Normal press (without shift) does nothing now - could be used for other functions later
   });
   LaunchpadProMK3.sendRGB(hotcuePaginationButton3, LaunchpadProMK3.hexToRGB(LaunchpadProMK3.deck.config["2"].colour));
 
-  // Row 1 Pad 7 (user's pad 8): Three-function hotcue control for deck 4
+  // Row 1 Pad 7 (user's pad 8): Hotcue bank cycling for deck 4
   hotcuePaginationButton4 = LaunchpadProMK3.row1[7]
   midi.makeInputHandler(0xB0, hotcuePaginationButton4, (channel, control, value, status, _group) => {
-    if (value !== 0 && LaunchpadProMK3.currentPage === 0) {  // Only on hotcue page
-      if (LaunchpadProMK3.row0Pad8Held) {
-        // Row0 pad 8 held: Clear all hotcues for deck 4
-        LaunchpadProMK3.clearAllHotcues(4);
-        DEBUG("Row1 pad 8 + Row0 pad 8: Clear all hotcues on deck 4", C.R);
-      } else if (LaunchpadProMK3.shift === 1) {
-        // Shift held: Cycle hotcue bank for deck 4
+    if (value !== 0 && LaunchpadProMK3.shift === 1) {
+      // Shift + Pad 7: Cycle hotcue bank for deck 4 (page 0 only)
+      if (LaunchpadProMK3.currentPage === 0) {
         LaunchpadProMK3.cycleHotcueBank(4);
-        DEBUG("Row1 pad 8 + Shift: Cycle hotcue bank for deck 4", C.G);
-      } else {
-        // Normal press: Create multiple hotcues for deck 4
-        LaunchpadProMK3.create4LeadupDropHotcues(4, value);
-        DEBUG("Row1 pad 8: Create multiple hotcues for deck 4", C.Y);
       }
     }
+    // Normal press (without shift) does nothing now - could be used for other functions later
   });
   LaunchpadProMK3.sendRGB(hotcuePaginationButton4, LaunchpadProMK3.hexToRGB(LaunchpadProMK3.deck.config["4"].colour));
 
@@ -805,11 +767,6 @@ LaunchpadProMK3.initExtras = function () {
   
   midi.makeInputHandler(0xB0, LaunchpadProMK3.row0[7], (channel, control, value, status, group) => {
     if (value === 0x7F) {  // Button pressed
-      // Track that row0 pad 8 is being held down
-      LaunchpadProMK3.row0Pad8Held = true;
-      DEBUG("Row0 pad 8 held down - clear all hotcues mode active", C.O);
-      
-      // Original effects toggle functionality
       LaunchpadProMK3.allEffectsEnabled = !LaunchpadProMK3.allEffectsEnabled;
       
       // List of effect units to control (you can add more effect units here)
@@ -839,10 +796,6 @@ LaunchpadProMK3.initExtras = function () {
       }
       
       DEBUG("All effects " + (LaunchpadProMK3.allEffectsEnabled ? "enabled" : "disabled"), C.G);
-    } else if (value === 0) {  // Button released
-      // Track that row0 pad 8 is no longer being held down
-      LaunchpadProMK3.row0Pad8Held = false;
-      DEBUG("Row0 pad 8 released - clear all hotcues mode deactivated", C.O);
     }
   });
   
