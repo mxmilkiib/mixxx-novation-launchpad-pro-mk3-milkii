@@ -8,6 +8,7 @@
             <file filename="lodash.mixxx.js" functionprefix=""/>
             <file filename="midi-components-0.0.js" functionprefix=""/>
             <file filename="LaunchpadProMK3.js" functionprefix="LaunchpadProMK3"/>
+            <file filename="milkii-controller-scripts.js" functionprefix="script"/>
         </scriptfiles>
         <controls/>
         <outputs/>
