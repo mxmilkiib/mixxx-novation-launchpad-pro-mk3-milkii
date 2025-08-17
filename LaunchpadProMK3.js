@@ -17,11 +17,15 @@
 // • Page 2: Beatjump controls (1-128 beats, backward/forward) with tempo-synced flashing
 // • Page 3: BPM scaling & tempo correction with visual feedback
 // • Page 4: Forward n reverse loop controls (beatloop, 128-1 beats)
-// • Page 5: Forward n reverse loop controls (beatloop + slip)
 // • Page 6: Forward n reverse loop controls (beatlooproll)
-// • Page 7: Forward n reverse loop controls (beatlooproll 
 // • Page 8: Loop move (move loop by 1-128 beats)
 // • Page 9: Loop resize (halve/double across columns)
+//
+// CONTROL BUTTONS:
+// • Row0: Hotcue color switching (pads 1-2), Brightness control (pads 3-4), Effects toggle (pad 8)
+// • Row1: Deck hotcue creation buttons (pads 1-4), Redo hotcue (pad 6), Alt modifier (pad 7)
+// • Row2: Page selection (pads 1-5), Undo hotcue (pad 6), Keep playing mode (pad 7)
+// • Sidepads: Deck selection (left 3), Loop mode toggle (rightmost) on page 1
 //
 // VISUAL SYSTEM:
 // • RGB LED control with brightness scaling
@@ -333,9 +337,10 @@ let lastHotcueCreationTime = 0;
 
 //// MARK: initVars()
 LaunchpadProMK3.initVars = function () {
-  //// initialise main variables
+  //// Initialize main variables
 
-  // MIDI addresses of the main 8x8 grid
+  // MIDI addresses of the main 8x8 grid (64 pads)
+  // Addresses are arranged from top-left to bottom-right
   LaunchpadProMK3.mainpadAddresses = [
     81, 82, 83, 84, 85, 86, 87, 88,
     71, 72, 73, 74, 75, 76, 77, 78,
@@ -348,9 +353,9 @@ LaunchpadProMK3.initVars = function () {
   ];
 
 
-  // sidepad pads
-
-  // MIDI addresses of the left/right side pads
+  // Sidepad system
+  // MIDI addresses of the left/right side pads (16 total)
+  // Arranged in 4 groups of 4 for the 4 decks
   LaunchpadProMK3.sidepads = [
     80, 70, 89, 79,
     60, 50, 69, 59,
@@ -359,7 +364,8 @@ LaunchpadProMK3.initVars = function () {
   ];
 
 
-  // Templates for assigning side pad controls
+  // Sidepad control names for intro/outro markers
+  // Each deck gets 4 sidepads: intro start, intro end, outro start, outro end
   LaunchpadProMK3.sidepadNames = [
     "intro_start_",
     "intro_end_",
@@ -368,10 +374,11 @@ LaunchpadProMK3.initVars = function () {
   ];
 
 
-  // row above main pads
+  // Control button rows
+  // Row above main pads (8 buttons)
   LaunchpadProMK3.row0 = [0x5B, 0x5C, 0x5D, 0x5E, 0x5F, 0x60, 0x61, 0x62];
 
-  // rows below main pads
+  // Rows below main pads (16 buttons total)
   LaunchpadProMK3.row1 = [0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C];
   LaunchpadProMK3.row2 = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
 
@@ -382,6 +389,7 @@ LaunchpadProMK3.initVars = function () {
   // Button 2: Page 4 (Forward Loop) ↔ Page 5 (Forward Loop + Slip)
   // Button 3: Page 6 (Reverse Loop) ↔ Page 7 (Reverse Loop + Slip)
   // Button 4: Page 8 (Loop Move) ↔ Page 9 (Loop Resize)
+  // Note: Buttons toggle between primary and alt pages when pressed multiple times
   LaunchpadProMK3.pageButtonConfig = [
     { primary: 0, alt: 1 },
     { primary: 2, alt: 3 },
@@ -391,11 +399,15 @@ LaunchpadProMK3.initVars = function () {
   ];
 
   // Colors for page indicator LEDs on row2
-  LaunchpadProMK3.pagePrimaryHighlightRgb = [127, 0, 20];   // existing highlight color
-  LaunchpadProMK3.pageAltHighlightRgb = [127, 30, 30];    // pastel for toggled page
+  // Primary page color (bright red)
+  LaunchpadProMK3.pagePrimaryHighlightRgb = [127, 0, 20];   
+  // Alt page color (pastel red for toggled state)
+  LaunchpadProMK3.pageAltHighlightRgb = [127, 30, 30];
 
 
   // Deck physical order (pad address offsets) and deck colours
+  // Order determines which 16-pad section of the grid each deck controls
+  // Colors are used for visual identification and LED lighting
   LaunchpadProMK3.deck.config = {
     "1": { order: 2, colour: 0x378df7 }, //blue
     "2": { order: 3, colour: 0xfeb108 }, //yellow
@@ -403,11 +415,15 @@ LaunchpadProMK3.initVars = function () {
     "4": { order: 4, colour: 0x88b31a }  //green
   };
 
-  // return which deck has the config order input var
+  // Helper function to find which deck has a specific physical order
+  // Used for mapping button presses to the correct deck based on grid position
   LaunchpadProMK3.getDeckFromOrder = function(order) {
     return Object.keys(LaunchpadProMK3.deck.config).find(key => LaunchpadProMK3.deck.config[key].order === order);
   };
 
+  // BPM scaling controls for page 3
+  // Each column represents a different tempo scaling factor
+  // Columns 1-4: slower tempos (0.5x to 1.0x), Columns 5-8: faster tempos (1.25x to 2.0x)
   LaunchpadProMK3.bpmScaleColumns = [
     { index: 1, scale: 0.5, control: "beats_set_halve", indicator: "beat_active_0_5", colour: 0xFF5555 }, //2
     { index: 2, scale: 0.666, control: "beats_set_twothirds", indicator: "beat_active_0_666", colour: 0x77FF77 }, //1.5
@@ -425,49 +441,56 @@ LaunchpadProMK3.initVars = function () {
   // const scaleColumnRgb = LaunchpadProMK3.bpmScaleColumns.map(column => LaunchpadProMK3.hexToRGB(column.colour));
 
   LaunchpadProMK3.totalDecks = Object.keys(LaunchpadProMK3.deck.config).length;
+  // Hotcue system configuration
   // Separate variables: total hotcues vs grid display 
   LaunchpadProMK3.totalDeckHotcuePadsShown = 64 / LaunchpadProMK3.totalDecks; // Grid display calculation (16 per deck for 4 decks)
-  LaunchpadProMK3.totalDeckHotcueButtons = 36; // Total hotcue buttons per deck
+  LaunchpadProMK3.totalDeckHotcueButtons = 36; // Total hotcue buttons per deck (3 banks of 16, 16, 4)
 
-  // full brightness LED colour is confusing
-  // these set how bright the LEDs are for loaded and unloaded decks
-  LaunchpadProMK3.deckLoadedActiveDimscale = 0.85
-  LaunchpadProMK3.deckLoadedInactiveDimscale = 0.4
-  LaunchpadProMK3.deckUnloadedDimscale = 0.2
+  // LED brightness scaling for different deck states
+  // These set how bright the LEDs are for loaded and unloaded decks
+  LaunchpadProMK3.deckLoadedActiveDimscale = 0.85  // Bright for active hotcues
+  LaunchpadProMK3.deckLoadedInactiveDimscale = 0.4 // Medium for loaded but inactive
+  LaunchpadProMK3.deckUnloadedDimscale = 0.2       // Dim for unloaded decks
 
   // Brightness/contrast control variables for dimmed pads
+  // Controls the visual feedback for loaded vs unloaded decks
   LaunchpadProMK3.dimBrightnessStep = 0.05; // How much to change brightness by
   LaunchpadProMK3.dimBrightnessMin = 0.1;   // Minimum brightness level
   LaunchpadProMK3.dimBrightnessMax = 0.9;   // Maximum brightness level
 
-  // Track what buttons are what
+  // Button system tracking
+  // Track what buttons are what for easy reference
   LaunchpadProMK3.buttons = {};
 
-  // Track which page is selected
+  // Page system tracking
+  // Track which page is selected (0-9)
   LaunchpadProMK3.currentPage = 0; // Page 0 for hotcues
   // Total number of pages (0..9)
   LaunchpadProMK3.totalPages = 10;
 
-  // Track which hotcue was last used
+  // Hotcue operation tracking
+  // Track which hotcue was last used for undo/redo system
   LaunchpadProMK3.lastHotcue = []; // Page 0 for hotcues
 
-  // Track what hotcue was last deleted
+  // Track what hotcue was last deleted for redo system
   LaunchpadProMK3.redoLastDeletedHotcue = [];
 
-  // Which deck actions will be performed on
+  // Track which deck channel was last used for hotcue operations
   LaunchpadProMK3.lastHotcueChannel = "undefined"
 
-  // Track if the shift button is pressed
+  // Modifier button state tracking
+  // Track if the shift button is pressed (accesses alternate functions)
   LaunchpadProMK3.shiftHeld = 0;
 
   // Track if row0 pad 8 is being held down (for clear all hotcues modifier)
   LaunchpadProMK3.altHeld = 0;
 
-  // Track if "keep playing" mode is active (when row2[6] is pressed)
+  // Track if "keep playing" mode is active (when row2[7] is pressed)
   LaunchpadProMK3.keepPlayingMode = false;
 
   // Hotcue bank switching system - now per-deck to support individual pagination
   // Each deck has its own hotcue bank: 1 (hotcues 1-16), 2 (hotcues 17-32), 3 (hotcues 33-36)
+  // Banks can be cycled independently per deck or all at once
   LaunchpadProMK3.hotcueBankPerDeck = {
     1: 1, // Deck 1 starts on bank 1
     2: 1, // Deck 2 starts on bank 1  
@@ -479,6 +502,7 @@ LaunchpadProMK3.initVars = function () {
   LaunchpadProMK3.hotcueBankActive = 1;
   
   // Function to cycle through hotcue banks for a specific deck
+  // Cycles through banks: 1 (hotcues 1-16) → 2 (hotcues 17-32) → 3 (hotcues 33-36) → 1
   LaunchpadProMK3.cycleHotcueBank = function(deckNum) {
     if (!LaunchpadProMK3.hotcueBankPerDeck[deckNum]) {
       LaunchpadProMK3.hotcueBankPerDeck[deckNum] = 1;
@@ -501,6 +525,7 @@ LaunchpadProMK3.initVars = function () {
   };
 
   // Function to cycle through hotcue banks for all decks at once
+  // Synchronizes all decks to the same bank for consistent operation
   LaunchpadProMK3.cycleHotcueBankAllDecks = function() {
     for (let deckNum = 1; deckNum <= LaunchpadProMK3.totalDecks; deckNum++) {
       if (!LaunchpadProMK3.hotcueBankPerDeck[deckNum]) {
@@ -528,6 +553,7 @@ LaunchpadProMK3.initVars = function () {
   };
 
   // Function to decrease brightness of dimmed pads
+  // Reduces brightness for unloaded and inactive deck indicators
   LaunchpadProMK3.decreaseDimBrightness = function() {
     LaunchpadProMK3.deckUnloadedDimscale = Math.max(
       LaunchpadProMK3.dimBrightnessMin,
@@ -550,6 +576,7 @@ LaunchpadProMK3.initVars = function () {
   };
 
   // Function to increase brightness of dimmed pads
+  // Increases brightness for unloaded and inactive deck indicators
   LaunchpadProMK3.increaseDimBrightness = function() {
     LaunchpadProMK3.deckUnloadedDimscale = Math.min(
       LaunchpadProMK3.dimBrightnessMax,
@@ -572,22 +599,22 @@ LaunchpadProMK3.initVars = function () {
   };
 
 
-  // initialize bpmFlashStep object for all pads (11 through 88)
-  // LaunchpadProMK3.bpmFlashStepInit = function () {
-  // reset the bpm pad flash step object (keyed by pad address)
+  // BPM flash animation system
+  // Initialize bpmFlashStep object for all pads (11 through 88)
+  // Used for tempo-synchronized flashing on beatjump and BPM scale pages
   LaunchpadProMK3.bpmFlashStep = {};
-  // };
 
 
-  // initialize base lastFlashTime object
+  // Animation and timing system initialization
+  // Base lastFlashTime object for BPM-synchronized animations
   LaunchpadProMK3.lastFlashTime = {};
   LaunchpadProMK3.songLengthInBeatsSamples = {};
   LaunchpadProMK3.lastTriggerOfPlayConnection = {};
 
-  // initialize lastBeatStep object
+  // Beat step tracking for animations
   LaunchpadProMK3.lastBeatStep = {};
 
-  // initialize animationSteps and lastBeatSteps objects
+  // Animation state tracking objects
   LaunchpadProMK3.animationSteps = LaunchpadProMK3.animationSteps || {};
   LaunchpadProMK3.lastBeatSteps = LaunchpadProMK3.lastBeatSteps || {};
 };
@@ -595,14 +622,16 @@ LaunchpadProMK3.initVars = function () {
 
 
 //// MARK: initExtras()
+// Initialize all control buttons and their MIDI handlers
 LaunchpadProMK3.initExtras = function () {
-  // Deck selection buttons
-  // TODO currently order here is hardcoded
+  // Control button system initialization
+  // TODO: Deck order is currently hardcoded - consider making this configurable
 
 
 
+  // Shift modifier button (0x5A)
+  // Press and hold to access alternate functions for other pads
   LaunchpadProMK3.buttons.shift = 0x5A
-  // shift;press and hold to access alternate functions for other pads
   midi.makeInputHandler(0xB0, LaunchpadProMK3.buttons.shift, (channel, control, value, status) => {
     if (value !== 0) {
       LaunchpadProMK3.shiftHeld = 1;
@@ -617,6 +646,7 @@ LaunchpadProMK3.initExtras = function () {
   LaunchpadProMK3.sendRGB(LaunchpadProMK3.buttons.shift, 0x00, 0x66, 0x7F);
 
 
+  // Alt modifier button (row1 pad 7) - used for clear all hotcues functionality
   LaunchpadProMK3.buttons.alt = LaunchpadProMK3.row1[6]
   midi.makeInputHandler(0xB0, LaunchpadProMK3.buttons.alt, (channel, control, value, status) => {
     if (value !== 0) {
@@ -629,35 +659,35 @@ LaunchpadProMK3.initExtras = function () {
   });
   LaunchpadProMK3.sendRGB(LaunchpadProMK3.buttons.alt, 0x00, 0x66, 0x7F);
 
-  // Brightness control and hotcue bank switching (row0[2] and row0[3]) - moved left one pad
+  // Brightness control and hotcue bank switching (row0[3] and row0[4])
   // Normal press: brightness control for dimmed pads
   // Shift + press: cycle hotcue banks for all decks
-  LaunchpadProMK3.buttons.brightnessControlDown = LaunchpadProMK3.row0[2]
+  LaunchpadProMK3.buttons.brightnessControlDown = LaunchpadProMK3.row0[3]
   midi.makeInputHandler(0xB0, LaunchpadProMK3.buttons.brightnessControlDown, (channel, control, value, status) => {
     if (value !== 0) {
       if (LaunchpadProMK3.shiftHeld === 1) {
         // Shift + left button: cycle hotcue banks for all decks
         LaunchpadProMK3.cycleHotcueBankAllDecks();
-        DEBUG("Shift + row0[2]: cycled hotcue banks for all decks", C.G);
+        DEBUG("Shift + row0[3]: cycled hotcue banks for all decks", C.G);
       } else {
         // Normal left button: decrease brightness
         LaunchpadProMK3.decreaseDimBrightness();
-        DEBUG("row0[2]: decreased brightness", C.Y);
+        DEBUG("row0[3]: decreased brightness", C.Y);
       }
     }
   });
   
-  LaunchpadProMK3.buttons.brightnessControlUp = LaunchpadProMK3.row0[3]
+  LaunchpadProMK3.buttons.brightnessControlUp = LaunchpadProMK3.row0[4]
   midi.makeInputHandler(0xB0, LaunchpadProMK3.buttons.brightnessControlUp, (channel, control, value, status) => {
     if (value !== 0) {
       if (LaunchpadProMK3.shiftHeld === 1) {
         // Shift + right button: cycle hotcue banks for all decks
         LaunchpadProMK3.cycleHotcueBankAllDecks();
-        DEBUG("Shift + row0[3]: cycled hotcue banks for all decks", C.G);
+        DEBUG("Shift + row0[4]: cycled hotcue banks for all decks", C.G);
       } else {
         // Normal right button: increase brightness
         LaunchpadProMK3.increaseDimBrightness();
-        DEBUG("row0[3]: increased brightness", C.Y);
+        DEBUG("row0[4]: increased brightness", C.Y);
       }
     }
   });
@@ -669,6 +699,8 @@ LaunchpadProMK3.initExtras = function () {
   // - Default: Create multiple hotcues (4 leadup + drop + 3 outro)
   // - Shift held: Cycle hotcue bank (3-bank system)
   // - Row0 pad 8 held: Clear all hotcues for the associated deck
+  // Note: Deck mapping is based on physical order, not deck number
+  // Row1 pad 1: Controls deck 3 (magenta, physical order 1)
   LaunchpadProMK3.buttons.deckButton1 = LaunchpadProMK3.row1[0]
   midi.makeInputHandler(0xB0, LaunchpadProMK3.buttons.deckButton1, (channel, control, value, status, _group) => {
     if (value !== 0 && LaunchpadProMK3.currentPage === 0) {  // Only on hotcue page
@@ -692,6 +724,7 @@ LaunchpadProMK3.initExtras = function () {
   });
   LaunchpadProMK3.sendRGB(LaunchpadProMK3.buttons.deckButton1, LaunchpadProMK3.hexToRGB(LaunchpadProMK3.deck.config["3"].colour));
 
+  // Row1 pad 2: Controls deck 1 (blue, physical order 2)
   LaunchpadProMK3.buttons.deckButton2 = LaunchpadProMK3.row1[1]
   midi.makeInputHandler(0xB0, LaunchpadProMK3.buttons.deckButton2, (channel, control, value, status, _group) => {
     if (value !== 0 && LaunchpadProMK3.currentPage === 0) {  // Only on hotcue page
@@ -715,6 +748,7 @@ LaunchpadProMK3.initExtras = function () {
   });
   LaunchpadProMK3.sendRGB(LaunchpadProMK3.buttons.deckButton2, LaunchpadProMK3.hexToRGB(LaunchpadProMK3.deck.config["1"].colour));
 
+  // Row1 pad 3: Controls deck 2 (yellow, physical order 3)
   LaunchpadProMK3.buttons.deckButton3 = LaunchpadProMK3.row1[2]
   midi.makeInputHandler(0xB0, LaunchpadProMK3.buttons.deckButton3, (channel, control, value, status, _group) => {
     if (value !== 0 && LaunchpadProMK3.currentPage === 0) {  // Only on hotcue page
@@ -738,6 +772,7 @@ LaunchpadProMK3.initExtras = function () {
   });
   LaunchpadProMK3.sendRGB(LaunchpadProMK3.buttons.deckButton3, LaunchpadProMK3.hexToRGB(LaunchpadProMK3.deck.config["2"].colour));
 
+  // Row1 pad 4: Controls deck 4 (green, physical order 4)
   LaunchpadProMK3.buttons.deckButton4 = LaunchpadProMK3.row1[3]
   midi.makeInputHandler(0xB0, LaunchpadProMK3.buttons.deckButton4, (channel, control, value, status, _group) => {
     if (value !== 0 && LaunchpadProMK3.currentPage === 0) {  // Only on hotcue page
@@ -762,8 +797,8 @@ LaunchpadProMK3.initExtras = function () {
   LaunchpadProMK3.sendRGB(LaunchpadProMK3.buttons.deckButton4, LaunchpadProMK3.hexToRGB(LaunchpadProMK3.deck.config["4"].colour));
 
 
-  // pop and pull hotcue info for the ability to undo and redo
-  // undo last hotcue
+  // Undo/redo hotcue system
+  // Undo last hotcue (row2 pad 6)
   LaunchpadProMK3.buttons.undoLastHotcue = LaunchpadProMK3.row2[5]
   midi.makeInputHandler(0xB0, LaunchpadProMK3.buttons.undoLastHotcue, (channel, control, value, status) => {
     if (value !== 0) {
@@ -773,7 +808,7 @@ LaunchpadProMK3.initExtras = function () {
   LaunchpadProMK3.sendRGB(LaunchpadProMK3.buttons.undoLastHotcue, 0x7F, 0x30, 0x7F);
 
 
-  // redo last hotcue
+  // Redo last hotcue (row1 pad 6)
   LaunchpadProMK3.buttons.redoLastHotcue = LaunchpadProMK3.row1[5]
   midi.makeInputHandler(0xB0, LaunchpadProMK3.buttons.redoLastHotcue, (channel, control, value, status) => {
     if (value !== 0) {
@@ -783,7 +818,7 @@ LaunchpadProMK3.initExtras = function () {
   LaunchpadProMK3.sendRGB(LaunchpadProMK3.buttons.redoLastHotcue, 0x2F, 0x20, 0x7F);
 
 
-  // keep playing mode
+  // Keep playing mode toggle (row2 pad 7)
   LaunchpadProMK3.buttons.keepPlayingMode = LaunchpadProMK3.row2[6]
   midi.makeInputHandler(0xB0, LaunchpadProMK3.buttons.keepPlayingMode, (channel, control, value, status) => {
     if (value !== 0) {
@@ -804,6 +839,7 @@ LaunchpadProMK3.initExtras = function () {
   
 
   // Page button toggle handler for row2 (first 5 pads)
+  // Handles primary/alt page switching for the 5 page selection buttons
   LaunchpadProMK3.handlePageButtonPress = function(buttonIndex) {
     const cfg = LaunchpadProMK3.pageButtonConfig[buttonIndex];
     if (!cfg || cfg.primary === null) {
@@ -822,7 +858,7 @@ LaunchpadProMK3.initExtras = function () {
     LaunchpadProMK3.selectPage(target);
   };
 
-  // Bind the page row2 pads to the toggle handler (based on config length)
+  // Bind the page selection buttons (row2 pads 1-5) to the toggle handler
   for (let i = 0; i < LaunchpadProMK3.pageButtonConfig.length; i += 1) {
     midi.makeInputHandler(0xB0, LaunchpadProMK3.row2[i], ((idx) => (channel, control, value, status, _group) => {
       if (value !== 0) { LaunchpadProMK3.handlePageButtonPress(idx); }
@@ -830,8 +866,8 @@ LaunchpadProMK3.initExtras = function () {
   }
 
 
-  // ability to switch color of a hotcue that has been created
-  // hotcue color switch prev
+  // Hotcue color switching controls
+  // Previous hotcue color (row0 pad 1)
   LaunchpadProMK3.buttons.hotcueColorSwitchPrev = LaunchpadProMK3.row0[0]
   midi.makeInputHandler(0xB0, LaunchpadProMK3.buttons.hotcueColorSwitchPrev, (control, value, status, group) => {
     if (value !== 0) {
@@ -846,7 +882,7 @@ LaunchpadProMK3.initExtras = function () {
   });
   LaunchpadProMK3.sendRGB(LaunchpadProMK3.buttons.hotcueColorSwitchPrev, 0x7F, 0x00, 0x00);
 
-  // hotcue color switch next
+  // Next hotcue color (row0 pad 2)
   LaunchpadProMK3.buttons.hotcueColorSwitchNext = LaunchpadProMK3.row0[1]
   midi.makeInputHandler(0xB0, LaunchpadProMK3.buttons.hotcueColorSwitchNext, (control, value, status, group) => {
     if (value !== 0) {
@@ -860,10 +896,12 @@ LaunchpadProMK3.initExtras = function () {
     }
   });
   LaunchpadProMK3.sendRGB(LaunchpadProMK3.buttons.hotcueColorSwitchNext, 0x00, 0x7F, 0x00);
-  DEBUG("## end LaunchpadProMK3.initExtras()", C.R, 0, 20);
+  DEBUG("## end LaunchpadProMK3.initExtras() - all control buttons initialized", C.R, 0, 20);
 
 
-  // Toggle all individual effects on/off
+  // Effects and hotcue clearing system
+  // Toggle all individual effects on/off (row0 pad 8)
+  // Also serves as modifier for clear all hotcues when held
   LaunchpadProMK3.allEffectsEnabled = false; // Track the state
   
   LaunchpadProMK3.buttons.allEffectsEnabled = LaunchpadProMK3.row0[7]
@@ -912,7 +950,9 @@ LaunchpadProMK3.initExtras = function () {
   LaunchpadProMK3.sendRGB(LaunchpadProMK3.buttons.allEffectsEnabled, 0x20, 0x10, 0x00);
 
 
-  // toggle split cue, and toggle temp partial reversal
+  // Split cue system controls
+  // Split cue toggle (row1 pad 8)
+  // Split cue volume switch (row2 pad 8)
   LaunchpadProMK3.buttons.splitCueToggle = LaunchpadProMK3.row1[7]
   LaunchpadProMK3.buttons.splitCueVolumeSwitch = LaunchpadProMK3.row2[7]
   LaunchpadProMK3.splitCueColourOff = [0x05, 0x05, 0x30];
@@ -1031,6 +1071,8 @@ LaunchpadProMK3.initExtras = function () {
 }
 
 // MARK: init Deck obj
+// Constructor for individual deck objects
+// Each deck manages its own hotcues, sidepads, and visual feedback
 LaunchpadProMK3.Deck = function (deckNum) {
   //D(LaunchpadProMK3.DEBUGstate, C.M, this.deckColour, this.pads, test)
   DEBUG("", C.RE, 2)
@@ -1075,14 +1117,15 @@ LaunchpadProMK3.Deck = function (deckNum) {
   DEBUG("Deck(" + C.O + deckNum + C.RE + ") deckLoaded " + C.O + deckLoaded)
   DEBUG("Deck(" + C.O + deckNum + C.RE + ") deckColour " + C.O + "#" + this.deckColour.toString(16).toUpperCase() + C.RE + " (" + C.O + LaunchpadProMK3.hexToRGB(this.deckColour) + C.RE + ")")
   //// Deck Main Hotcues
-  // initialise an array, attached to the object, that will hold the individual hotcue objects
+  // Initialize hotcue button array for this deck
+  // Each deck can have up to 36 hotcues across 3 banks
   this.hotcueButtons = [];
   DEBUG("Deck(" + C.O + deckNum + C.G + ") ### start hotcue pads init", C.G, 1);
 
 
   channel = "[Channel" + deckNum + "]";
 
-  // Create hotcue buttons for all 32 hotcues (both banks)
+  // Create hotcue buttons for all 36 hotcues (3 banks)
   // MARK: Deck main pad init
   for (let i = 1; i <= LaunchpadProMK3.totalDeckHotcueButtons; i += 1) {
     color_obj = "";
@@ -1090,7 +1133,7 @@ LaunchpadProMK3.Deck = function (deckNum) {
     // Calculate pad address: only 16 physical pads, so map both banks to same pads
     let padGridIndex = (i - 1) % LaunchpadProMK3.totalDeckHotcuePadsShown; // 0-15 for display grid
     let padAddress = this.pads[padGridIndex];
-    // give the hotcue a number (1-32)
+    // give the hotcue a number (1-36)
     let hotcueNum = i;
     this.deckRgb = LaunchpadProMK3.darkenRGBColour(LaunchpadProMK3.hexToRGB(this.deckColour), LaunchpadProMK3.deckUnloadedDimscale);
     LaunchpadProMK3.sendRGB(padAddress, this.deckRgb[0], this.deckRgb[1], this.deckRgb[2]);
@@ -1425,6 +1468,7 @@ LaunchpadProMK3.Deck = function (deckNum) {
 
 
   ////MARK: Deck side pad init
+  // Initialize intro/outro marker sidepads for this deck
   DEBUG("Deck(" + C.O + deckNum + C.G + ") ### intro/outro sidepads init", C.G);
   this.sideButtons = [];
   DEBUG("Deck(" + C.O + deckNum + C.RE + ") this.deckSidepadAddresses " + C.O + this.deckSidepadAddresses)
@@ -1435,7 +1479,7 @@ LaunchpadProMK3.Deck = function (deckNum) {
     // if (LaunchpadProMK3.selectPage === 6) { padAddress = LaunchpadProMK3.sidepads[12 + sidepad] - 20 };
     // the sidepad control this loop will setup
     const sidepadControlName = LaunchpadProMK3.sidepadNames[sidepad - 1];
-    // let rgb = LaunchpadProMK3.hexToRGB(0x00FFFF) // UNUSED VARIABLE
+    // Each sidepad controls: intro_start, intro_end, outro_start, outro_end
 
     DEBUG("Deck(" + deckNum + ")" + C.RE + " side pad " + C.O + sidepad + C.RE + "   padAddress " + C.O + padAddress + C.RE + " (" + C.O + "0x" + padAddress.toString(16).padStart(2, "0").toUpperCase() + C.RE + ")", C.O)
     if (deckLoaded !== 1) { this.deckRgb = LaunchpadProMK3.darkenRGBColour(LaunchpadProMK3.hexToRGB(this.deckColour), LaunchpadProMK3.deckUnloadedDimscale); }
@@ -1576,6 +1620,7 @@ LaunchpadProMK3.Deck = function (deckNum) {
 
   DEBUG("Deck(" + C.O + deckNum + C.G + ") ### init reconnect Components properties to group", C.G, 1);
   // Set the group properties of the above Components and connect their output callback functions
+  // This ensures all hotcue and sidepad components are properly connected to the deck
   this.reconnectComponents(function (c) {
     if (c.group === undefined) {
       // 'this' inside a function passed to reconnectComponents refers to the ComponentContainer
@@ -1594,6 +1639,7 @@ LaunchpadProMK3.Deck.prototype = new components.Deck();
 
 // MARK: clearPageMidiHandlers()
 // Clear all MIDI input handlers for pads when switching pages
+// This prevents conflicts between different page handlers
 LaunchpadProMK3.clearPageMidiHandlers = function () {
   DEBUG("clearPageMidiHandlers: Clearing all pad MIDI handlers", C.G);
   
@@ -1648,6 +1694,7 @@ LaunchpadProMK3.clearPageMidiHandlers = function () {
 
 LaunchpadProMK3.clearBeatConnections = function () {
   // MARK: clearBeatConnections()
+  // Clean up all beat-synchronized connections when switching pages
   // Graceful degradation: if beatConnections doesn't exist, initialize it
   const beatConnections = LaunchpadProMK3.beatConnections || [];
   
@@ -1677,6 +1724,7 @@ LaunchpadProMK3.clearBeatConnections = function () {
 
 // Send RGB values to a single pad
 // MARK: sendRGB/HEX()
+// Converts RGB values to MIDI range (0-127) and sends via SysEx
 LaunchpadProMK3.sendRGB = function (pad, r, g, b) {
   // Graceful degradation: handle different input formats
   if (g === undefined && r !== undefined && Array.isArray(r)) {
@@ -1711,6 +1759,7 @@ LaunchpadProMK3.sendHEX = function (pad, hex) {
 
 // Helper function to convert RGB hex value to individual R, G, B values
 // MARK: hexToRGB()
+// Converts hex color values (0xRRGGBB) to RGB arrays [R, G, B]
 LaunchpadProMK3.hexToRGB = function (hex) {
   // If it's already an array, return it
   if (Array.isArray(hex)) {
@@ -1726,6 +1775,7 @@ LaunchpadProMK3.hexToRGB = function (hex) {
 
 // Darken an RGB colour by ratio
 // MARK: darkenRGBColour()
+// Applies non-linear scaling for better visual sensitivity
 LaunchpadProMK3.darkenRGBColour = function (rgbIn, ratio) {
   // if (ratio === undefined) { DEBUG("LaunchpadProMK3.darkenRGBColour   darken ratio undefined, so ratio = 0.2", C.O); ratio = 0.2 }
   // Clamp the ratio between 0 and 1
@@ -1741,8 +1791,9 @@ LaunchpadProMK3.darkenRGBColour = function (rgbIn, ratio) {
   return rgb;
 }
 
-// toggle sidepad colour to blue or off
+// Toggle sidepad colour to blue or off based on intro/outro marker status
 // MARK: p0 trackWithIntroOutro()
+// Blue indicates marker is active, off indicates no marker
 LaunchpadProMK3.trackWithIntroOutro = function (value, deckNum, padAddress) {
   if (value > 0) {
     DEBUG("trackWithIntroOutro(" + C.O + deckNum + C.O + ") pad " + C.O + padAddress + C.RE + "   deckLoaded " + C.O + value + C.RE)
@@ -1754,6 +1805,7 @@ LaunchpadProMK3.trackWithIntroOutro = function (value, deckNum, padAddress) {
 
 // Update hotcue bank indicator lights - now shows overall system status
 // MARK: p0 updateHotcueBankLights()
+// Controls the brightness of row0[3] and row0[4] to indicate bank usage
 LaunchpadProMK3.updateHotcueBankLights = function () {
   if (LaunchpadProMK3.currentPage !== 0 && LaunchpadProMK3.currentPage !== 6) {
     // Turn off bank lights when not on page 0 or 6
@@ -1808,6 +1860,8 @@ LaunchpadProMK3.updateHotcueBankLights = function () {
 
 //// Multiple pad light functions
 
+// Send the same color to a pad and the pad 10 addresses below it
+// Used for visual effects that span multiple rows
 LaunchpadProMK3.sendTopAndBottom = function (padAddress, rgb, rgb2, rgb3) {
   // Graceful degradation: handle different input formats
   if (Array.isArray(rgb) && rgb.length >= 3){
@@ -1827,6 +1881,8 @@ LaunchpadProMK3.sendTopAndBottom = function (padAddress, rgb, rgb2, rgb3) {
 
 
 // MARK: sidepadDeckColour()
+// Set the color of all sidepads for a specific deck
+// Used for visual deck identification
 LaunchpadProMK3.sidepadDeckColour = function (d) {
   DEBUG("LaunchpadProMK3.sidepadDeckColour()", C.G, 2)
   DEBUG("sidepadDeckColour:   d " + C.O + d, C.RE);
@@ -1879,7 +1935,8 @@ LaunchpadProMK3.sidepadDeckColour = function (d) {
 };
 
 
-  // LEDs for changing page
+  // LEDs for page selection and system controls
+  // Lights up row2 buttons with appropriate colors for current page
   LaunchpadProMK3.lightUpRow2 = function () {
   DEBUG("LaunchpadProMK3.lightUpRow2()", C.G, 0, 1)
   
@@ -1911,6 +1968,8 @@ LaunchpadProMK3.sidepadDeckColour = function (d) {
 
 
 // MARK: gradientSetup()
+// Apply split gradients to deck pads for visual organization
+// Creates two separate gradients that meet in the middle
 LaunchpadProMK3.gradientSetup = function (deck, altpos, gradStartA, gradEndA, gradStartB, gradEndB) {
   // Graceful degradation: if deck doesn't exist, use deck 1 as fallback
   const targetDeck = LaunchpadProMK3.decks[deck] || LaunchpadProMK3.decks[1];
@@ -1977,6 +2036,8 @@ LaunchpadProMK3.gradientSetup = function (deck, altpos, gradStartA, gradEndA, gr
 };
 
 
+// Calculate a linear gradient between two colors
+// Returns an array of RGB values representing the gradient steps
 LaunchpadProMK3.gradientCalculate = function (color1, color2, steps) {
   // Graceful degradation: if inputs are invalid, return default gradient
   if (!color1 || !Array.isArray(color1) || color1.length < 3) {
@@ -2005,6 +2066,7 @@ LaunchpadProMK3.gradientCalculate = function (color1, color2, steps) {
 // MARK: getMainGridPadAddressesForRows()
 // Returns a flat array of pad addresses for the given grid row indices.
 // Accepts 1-based rows (1..8) or 0-based (0..7). Preserves left→right order per row.
+// Used for applying visual effects to specific row groups
 LaunchpadProMK3.getMainGridPadAddressesForRows = function (rowIndices) {
   const rows = Array.isArray(rowIndices) ? rowIndices : [rowIndices];
   const pads = [];
@@ -2033,6 +2095,7 @@ LaunchpadProMK3.getMainGridPadAddressesForRows = function (rowIndices) {
 
 // MARK: applyLinearGradientToSpecificPads()
 // Apply a single linear gradient across an explicit pad list (8/16/32 pads).
+// Used for creating smooth color transitions across specific pad groups
 LaunchpadProMK3.applyLinearGradientToSpecificPads = function (deck, pads, startRgb, endRgb) {
   if (!pads || pads.length === 0) { return; }
   const channel = `[Channel${deck}]`;
@@ -2051,6 +2114,7 @@ LaunchpadProMK3.applyLinearGradientToSpecificPads = function (deck, pads, startR
 // MARK: applySplitGradientToSpecificPads()
 // Split the pad list into two equal halves and apply A and B gradients respectively.
 // Ideal for 16 pads over two rows, or 32 pads over four rows.
+// Creates visual separation between different control sections
 LaunchpadProMK3.applySplitGradientToSpecificPads = function (deck, pads, gradStartA, gradEndA, gradStartB, gradEndB) {
   if (!pads || pads.length === 0) { return; }
   const half = Math.floor(pads.length / 2);
@@ -2073,9 +2137,9 @@ LaunchpadProMK3.applySplitGradientToSpecificPads = function (deck, pads, gradSta
 };
 
 
-//// clearing an resetting main hotcues
+//// clearing and resetting main hotcues
 // MARK: clearMain()
-// turn off main LEDs for page change
+// Turn off all main grid and sidepad LEDs for page changes
 LaunchpadProMK3.clearMain = function () {
   //// main pads
   DEBUG("clearMain: /// clearing ALL main and side pads", C.G, 1);
@@ -2121,8 +2185,9 @@ LaunchpadProMK3.clearMain = function () {
 };
 
 
-// turn off ALL LEDs for page change or shutdown
+// Turn off ALL LEDs for page change or shutdown
 // MARK: clearAll()
+// Comprehensive LED clearing for all pads on the controller
 LaunchpadProMK3.clearAll = function () {
   DEBUG("/// clearing all pads", C.G, 2);
   // compile and send a two part msg to turn all pads off
@@ -2142,6 +2207,7 @@ LaunchpadProMK3.clearAll = function () {
 
 // Shutdown function that should be triggered by Mixxx on close
 // MARK: shutdown()
+// Cleans up all LEDs and prepares controller for shutdown
 LaunchpadProMK3.shutdown = function () {
   DEBUG("###  SHUTTINGDOWN..  ###", C.O, 2, 3);
   LaunchpadProMK3.clearAll();
@@ -2181,8 +2247,9 @@ LaunchpadProMK3.shutdown = function () {
 
 
 //// Page functions
-// handle switching pages
+// Handle switching between the 10 available pages
 // MARK: selectPage()
+// Manages page transitions and cleanup of previous page resources
 LaunchpadProMK3.selectPage = function (page) {
   // find target page if none provided
   DEBUG("selectPage(" + C.O + page + C.G + ")", C.G, 25);
@@ -2273,8 +2340,9 @@ DEBUG("########### selectPage before if: page " + C.O + page, C.R);
 };
 
 
-// update main and side pad lights for a specific deck
+// Update main and side pad lights for a specific deck
 // MARK: p0 updateHotcueLights()
+// Refreshes all visual indicators for hotcues and intro/outro markers
 LaunchpadProMK3.updateHotcueLights = function (deckNum) {
   DEBUG("updateHotcueLights(" + deckNum + "): deck.config[" + deckNum + "] " + JSON.stringify(LaunchpadProMK3.deck.config[deckNum]), C.G, 2)
   const channel = `[Channel${deckNum}]`
@@ -2357,10 +2425,11 @@ LaunchpadProMK3.updateHotcueLights = function (deckNum) {
 
 
 
-/// First page (0)
+/// First page (0) - Hotcue System
 
 // Function to update pad lights for each hotcue
 // MARK: p0 updateHotcuePage()
+// Main hotcue page display and management
 LaunchpadProMK3.updateHotcuePage = function (deck) {
   if (LaunchpadProMK3.currentPage === 0) {
     DEBUG("  ", C.RE, 2);
@@ -2403,6 +2472,8 @@ LaunchpadProMK3.updateHotcuePage = function (deck) {
 
 
 // MARK: p0 undoLastHotcue()
+// Undo the last hotcue operation (creation, deletion, etc.)
+// Maintains a stack of operations for undo/redo functionality
 LaunchpadProMK3.undoLastHotcue = function () {
   DEBUG("undoLastHotcue: ####################### undooooo", C.G, 1);
   // Check that a hotcue has been created
@@ -2432,6 +2503,8 @@ LaunchpadProMK3.undoLastHotcue = function () {
 
 
 // MARK: p0 redoLastHotcue()
+// Redo the last undone hotcue operation
+// Restores hotcues that were previously undone
 LaunchpadProMK3.redoLastHotcue = function () {
   DEBUG("redoLastHotcue: ####################### REDOOO", C.R, 1, 1);
   // Check if a hotcue has been undone
@@ -2458,6 +2531,8 @@ LaunchpadProMK3.redoLastHotcue = function () {
 
 
 // MARK: p0 clearAllHotcues()
+// Clear all hotcues for a specific deck with undo support
+// Removes all 36 hotcues and adds them to the undo stack
 LaunchpadProMK3.clearAllHotcues = function (deckNum) {
   DEBUG("clearAllHotcues: ####################### CLEAR ALL HOTCUES on deck " + deckNum, C.R, 1, 1);
   
@@ -2510,6 +2585,8 @@ LaunchpadProMK3.clearAllHotcues = function (deckNum) {
 
 
 // MARK: p0 create4LeadupDropHotcues()
+// Create a sequence of hotcues for DJ mixing: 4 leadup + drop + 3 outro
+// Each hotcue is positioned at specific beat intervals for smooth transitions
 var leadupCues = {
   "1": { control: "beatjump_256_backward", colour: 0x006838  }, // -265, dark green
   "2": { control: "beatjump_64_forward", colour: 0x006838  },   // -192, dark green
@@ -2630,8 +2707,10 @@ LaunchpadProMK3.create4LeadupDropHotcues = function (deck, value) {
 };
 
 
+// MARK: p1 updateOneDeckPage()
+// One-deck mode page with mixed controls for a single selected deck
+// Combines hotcues, beatjump, and loop controls in one view
 LaunchpadProMK3.updateOneDeckPage = function () {
-  // MARK: p1 updateOneDeckPage()
   if (LaunchpadProMK3.currentPage === 1) {
     DEBUG("  ");
     DEBUG(" ▄▄▄▄▄▄▄▄▄▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄ ", C.M);
