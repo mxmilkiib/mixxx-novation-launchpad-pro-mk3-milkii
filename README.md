@@ -1,6 +1,6 @@
-# Launchpad Pro MK3 Controller Script Specification
+# Launchpad Pro MK3 MIDI Controller Script for Mixxx
 
-**Version**: Current (3129 lines)  
+**Version**: Current (code-driven)  
 **Author**: Milkii B  
 **Target Hardware**: Novation Launchpad Pro MK3  
 **Target Software**: Mixxx DJ Software  
@@ -26,15 +26,15 @@ This specification describes a comprehensive Mixxx controller script for the Nov
 
 ## Core Architecture
 
-### Core Object & State
+### Core object & state
 ```javascript
 var LaunchpadProMK3 = {};
 
 // Key state variables
-LaunchpadProMK3.currentPage = 0;           // 0-9, toggled via row2[0-4]
-LaunchpadProMK3.totalPages = 10;
-LaunchpadProMK3.shift = 0;                 // Set by 0x5A (row0[7])
-LaunchpadProMK3.keepPlayingMode = false;   // Toggled by row1[2] or row1[3]
+LaunchpadProMK3.currentPage = 0;           // 0-7
+LaunchpadProMK3.totalPages = 8;            // pages 0..7
+LaunchpadProMK3.shiftHeld = 0;             // set by row1[4] (middle row pad 5)
+LaunchpadProMK3.keepPlayingMode = false;   // toggled by row2[6]
 LaunchpadProMK3.splitCue = 0;              // headSplit state
 LaunchpadProMK3.splitCueUnVol = 0;         // UnVol system active
 LaunchpadProMK3.totalDecks = 4;            // Configurable 2-4
@@ -56,15 +56,14 @@ LaunchpadProMK3.hotcueBankPerDeck = {      // Banks 1-3, cycle 1→2→3→1
 };
 ```
 
-### Page Button Configuration
+### page button configuration
 ```javascript
-// row2[0-4] toggle pairs for page selection
+// row2[0-3] toggle pairs for page selection (row2[4] is slip toggle)
 LaunchpadProMK3.pageButtonConfig = [
   { primary: 0, alt: 1 },                  // Hotcues ↔ One-Deck
   { primary: 2, alt: 3 },                  // Beatjump ↔ BPM Scale 
-  { primary: 4, alt: 5 },                  // Loops ↔ Loops+Slip
-  { primary: 6, alt: 7 },                  // Reverse Loops ↔ Reverse+Slip
-  { primary: 8, alt: 9 }                   // Loop Move ↔ Loop Resize
+  { primary: 4, alt: 5 },                  // Forward Loops ↔ Reverse Loops
+  { primary: 6, alt: 7 }                   // Loop Move ↔ Loop Resize
 ];
 ```
 
@@ -99,11 +98,11 @@ LaunchpadProMK3.loopControls = [           // Pages 4-5 loop sizes
 ];
 ```
 
-### MIDI Handlers
+### midi handlers
 ```javascript
 // Row Controls (0xB0) - Control Change messages
 LaunchpadProMK3.row0 = [0x5B, 0x5C, 0x5D, 0x5E, 0x5F, 0x60, 0x61, 0x62];
-LaunchpadProMK3.row1 = [0x69, 0x6A, 0x6B, 0x6C, 0x65, 0x66, 0x67, 0x68];
+LaunchpadProMK3.row1 = [0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C];
 LaunchpadProMK3.row2 = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
 
 // Main Grid (0x90) - Note On/Off for 8x8 matrix
@@ -113,14 +112,14 @@ LaunchpadProMK3.mainpadAddresses = [81, 82, 83, 84, 85, 86, 87, 88, ...];
 LaunchpadProMK3.sidepads = [80, 70, 89, 79, 60, 50, 69, 59, ...];
 ```
 
-### Page System
-The controller operates in 10 pages, organized in five primary/alternate pairs selected from `row2`:
+### page system
+the controller operates in 8 pages, organized in four primary/alternate pairs selected from `row2`:
 
-- **Row2[0]**: Page 0 ↔ Page 1
-- **Row2[1]**: Page 2 ↔ Page 3  
-- **Row2[2]**: Page 4 ↔ Page 5
-- **Row2[3]**: Page 6 ↔ Page 7
-- **Row2[4]**: Page 8 ↔ Page 9
+- **row2[0]**: page 0 ↔ page 1
+- **row2[1]**: page 2 ↔ page 3  
+- **row2[2]**: page 4 ↔ page 5
+- **row2[3]**: page 6 ↔ page 7
+- **row2[4]**: slip toggle (not a page)
 
 #### Page 0: Hotcues & Intro/Outro Markers
 **Main Grid**: Hotcues per deck with per-deck banking system
@@ -133,13 +132,13 @@ The controller operates in 10 pages, organized in five primary/alternate pairs s
 - `intro_start_activate`, `intro_end_activate`, `outro_start_activate`, `outro_end_activate`
 - Each deck's sidepads are positioned based on deck order configuration
 
-#### Page 1: One-Deck Focus Mode
-**Main Grid**: Mixed controls for the selected deck with enhanced functionality
-- **Bottom 2 Rows**: Selected deck hotcues (banked as in Page 0)
-- **Middle Rows**: Beatjump controls with tempo-synchronized flashing
-- **Top Rows**: Loop controls (planned expansion)
-- **Sidepads**: Deck selection system; rightmost per-deck sidepad toggles loop mode
-- **Deck Selection**: Left three sidepads select target deck; rightmost toggles loop behavior
+#### page 1: one-deck focus mode
+**main grid**: mixed controls for the selected deck
+- **rows 7–8**: selected deck hotcues (banked as in page 0)
+- **rows 5–6**: beatjump controls with tempo-synced flashing
+- **rows 1–4**: loop controls; row0[5]=exit-on-release, row0[6]=roll vs set
+- **sidepads**: left column loop move; right column loop resize
+- **deck selection**: row1 pads 1–4 select decks by physical order (magenta, blue, yellow, green)
 
 #### Page 2: Beatjump Controls
 **Main Grid**: Beatjump controls per deck with deck-colored gradients and tempo-synchronized flashing
@@ -158,76 +157,61 @@ The controller operates in 10 pages, organized in five primary/alternate pairs s
 - **Animation System**: Scaled-beat animations with 4-state cycle for visual tempo feedback
 - **Sidepads**: Deck colors with beat flashing; scaled-beat animations synchronized to grid
 
-#### Page 4: Loop Controls (Forward)
+#### page 4: loop controls (forward)
 **Main Grid**: Beatloop activations across standard loop sizes
 - **Loop Sizes**: 1, 2, 4, 8, 16, 32, 64, 128 beats
 - **Controls**: Uses `beatloop_X_activate` Mixxx controls
 - **Visual**: Deck-colored grid with loop size indicators
 
-#### Page 5: Loop Controls (Forward + Slip)
-**Main Grid**: Same as Page 4 with slip mode enabled
-- **Slip Mode**: Automatically enables `slip_enabled` for all decks
-- **Behavior**: Loops maintain position while allowing real-time manipulation
-- **Visual**: Identical to Page 4 with slip state indication
+#### page 5: loop controls (reverse)
+**main grid**: reverse loop variations using beatlooproll/beatloop (follows row0[6])
 
-#### Page 6: Loop Controls (Reverse)
-**Main Grid**: Reverse loop variations using `beatlooproll` controls
-- **Reverse Behavior**: Loops created backwards from current position
-- **Controls**: Uses `beatlooproll_X_activate` for reverse loop behavior
-- **Visual**: Deck-colored grid with reverse loop indicators
+#### page 6: loop move
+**main grid**: move active loop by specified beat amounts
 
-#### Page 7: Loop Controls (Reverse + Slip)
-**Main Grid**: Same as Page 6 with slip mode enabled
-- **Combination**: Reverse loop behavior with slip mode for real-time manipulation
-- **Use Case**: Advanced loop techniques requiring reverse positioning and slip
+#### page 7: loop resize
+**main grid**: resize active loop with halve/double patterns
 
-#### Page 8: Loop Move
-**Main Grid**: Move active loop by specified beat amounts
-- **Functionality**: Shift existing loop position by 1–128 beats
-- **Controls**: Loop move controls for precise loop positioning
-- **Visual**: Grid shows move distances with deck color coding
-
-#### Page 9: Loop Resize
-**Main Grid**: Resize active loop with halve/double patterns
-- **Column Layout**: Each column represents different resize operations
-- **Patterns**: Halve, double, and proportional resize controls
-- **Visual**: Grid shows resize operations with visual feedback
+#### page 8: animations (aux)
+reserved animations/aux page; not part of row2 page selection
 
 ## Control Mappings
 
-### Row 0 (Top Controls)
+### row 0 (top controls)
 | Pad | Function | Notes |
 |-----|----------|-------|
-| 0   | Hotcue color previous | Affects `lastHotcueChannel`; cycles through Mixxx hotcue color palette |
-| 1   | Hotcue color next | Affects `lastHotcueChannel`; cycles through Mixxx hotcue color palette |
-| 2   | Dim brightness down; Shift: cycle hotcue bank (all decks) | Bank lights reflect usage patterns across all decks |
-| 3   | Dim brightness up; Shift: cycle hotcue bank (all decks) | Bank lights reflect usage patterns across all decks |
-| 4-6 | Reserved | Future expansion for additional hotcue management features |
-| 7   | Hold: Clear-All-Hotcues modifier; Tap: toggle all effects | Used with Row1 deck buttons on Page 0; effects toggle controls all effect units |
+| 0   | dim brightness down | shift: cycle hotcue bank (all decks) |
+| 1   | dim brightness up | shift: cycle hotcue bank (all decks) |
+| 2   | hotcue color previous | affects `lastHotcueChannel` |
+| 3   | hotcue color next | affects `lastHotcueChannel` |
+| 4   | selected deck swatch | paints to one-deck selected deck color |
+| 5   | exit-on-release toggle | loop persistence control (pages 1/4/5) |
+| 6   | loop type toggle | roll vs set (pages 1/4/5) |
+| 7   | hold: clear-all-hotcues; tap: toggle all effects | used with row1 deck buttons on page 0 |
 
-### Row 1 (Middle Controls)
+### row 1 (middle controls)
 | Pad | Normal Function | Shift Function | Hold Row0[7] |
 |-----|-----------------|----------------|---------------|
-| 0   | Undo last hotcue | - | - |
-| 1   | Redo last hotcue | - | - |
-| 2   | Keep Playing Mode toggle | - | - |
-| 3   | Keep Playing Mode toggle | - | - |
-| 4   | Create multi hotcues (Deck 3) | Cycle hotcue bank (Deck 3) | Clear all hotcues (Deck 3) |
-| 5   | Create multi hotcues (Deck 1) | Cycle hotcue bank (Deck 1) | Clear all hotcues (Deck 1) |
-| 6   | Create multi hotcues (Deck 2) | Cycle hotcue bank (Deck 2) | Clear all hotcues (Deck 2) |
-| 7   | Create multi hotcues (Deck 4) | Cycle hotcue bank (Deck 4) | Clear all hotcues (Deck 4) |
+| 0   | create multi hotcues (deck 3) | shift: cycle bank | hold row0[7]: clear all |
+| 1   | create multi hotcues (deck 1) | shift: cycle bank | hold row0[7]: clear all |
+| 2   | create multi hotcues (deck 2) | shift: cycle bank | hold row0[7]: clear all |
+| 3   | create multi hotcues (deck 4) | shift: cycle bank | hold row0[7]: clear all |
+| 4   | shift modifier | holds alt functions |
+| 5   | redo last hotcue | - | - |
+| 6   | alt modifier | used for clear-all mode |
+| 7   | split cue (headSplit) toggle | - | - |
 
-### Row 2 (Bottom Controls)
+### row 2 (bottom controls)
 | Pad | Function |
 |-----|----------|
-| 0   | Toggle Page 0 ↔ 1 | Hotcues ↔ One-Deck Focus |
-| 1   | Toggle Page 2 ↔ 3 | Beatjump ↔ BPM Scale |
-| 2   | Toggle Page 4 ↔ 5 | Loops ↔ Loops+Slip |
-| 3   | Toggle Page 6 ↔ 7 | Reverse Loops ↔ Reverse+Slip |
-| 4   | Toggle Page 8 ↔ 9 | Loop Move ↔ Loop Resize |
-| 5   | Reserved | Future expansion |
-| 6   | Split Cue UnVol toggle | Temporary split off; restores previous states on exit |
-| 7   | Split Cue (headSplit) toggle | Main split cue control or UnVol exit when active |
+| 0   | toggle page 0 ↔ 1 | hotcues ↔ one-deck |
+| 1   | toggle page 2 ↔ 3 | beatjump ↔ bpm scale |
+| 2   | toggle page 4 ↔ 5 | forward loops ↔ reverse loops |
+| 3   | toggle page 6 ↔ 7 | loop move ↔ loop resize |
+| 4   | slip toggle | global slip for all decks |
+| 5   | undo last hotcue | - |
+| 6   | keep playing mode toggle | prevents stop-on-release |
+| 7   | split cue volume switch (unvol) | enhanced unvol system |
 
 ## Advanced Features
 
@@ -262,17 +246,17 @@ The controller operates in 10 pages, organized in five primary/alternate pairs s
 
 ### Audio Routing
 
-#### Split Cue System
+#### split cue system
 **Functions**: `toggleSplitCue()` and `toggleSplitCueUnVol()`
-- **Split (Row2[7])**: Toggles `headSplit` and updates LED state; routes selected deck to headphones
-- **UnVol (Row2[6])**: Temporarily disables `headSplit` and adjusts `headMix` for independent volume control
-- **Exit Behavior**: Pressing Row2[7] while UnVol active exits system and restores previous `headSplit`/`headMix` states
+- **split (row1[7])**: toggles `headSplit` and updates leds
+- **unvol (row2[7])**: temporary volume split switch with state restore
+- **exit behavior**: pressing row2[7] while unvol active exits and restores prior `headSplit`/`headMix`
 - **Visual Feedback**: Row2[6] shows orange when UnVol active; Row2[7] shows deep blue when split enabled
 - **Use Case**: DJ monitoring without affecting main mix; temporary volume adjustments
 
-#### Keep Playing Mode
+#### keep playing mode
 **Function**: Prevents hotcue button releases from stopping playback
-- **Activation**: Row1[2] or Row1[3] toggle (both buttons synchronized)
+- **activation**: row2[6] toggle
 - **Visual Feedback**: Blue-purple button illumination when active
 - **Auto-Reset**: Automatically disables when new hotcue is pressed
 - **Use Case**: Live performance requiring continuous playback control; prevents accidental stops
@@ -287,8 +271,8 @@ The controller operates in 10 pages, organized in five primary/alternate pairs s
   - Unloaded deck: 20% brightness for minimal presence
 - **Hotcue States**: Present (full deck color), Empty (dimmed deck color), Bank indicator (bright/dim based on active bank)
 
-#### Bank Indicator Lights
-- **Row0[2] and Row0[3]**: Indicate hotcue bank usage across all decks
+#### bank indicator lights
+- **row0[0] and row0[1]**: indicate hotcue bank usage across all decks
 - **Color Semantics**: 
   - Bright green: All decks using this bank
   - Medium green: Some decks using this bank
@@ -319,23 +303,23 @@ LaunchpadProMK3.hexToRGB(hexColor) // Returns [r, g, b] array
 LaunchpadProMK3.sendRGB(pad, r, g, b) // Direct RGB control with bounds checking
 ```
 
-### Component Integration
-- **Base Framework**: Mixxx Components.js framework for core functionality
+### component integration
+- **base framework**: Mixxx Components.js framework for core functionality
 - **Deck Objects**: Extended `components.Deck` with custom properties and methods
 - **Button Objects**: `components.HotcueButton` with enhanced functionality and state tracking
 - **Per-Deck Banks**: `hotcueBankPerDeck` maps deck numbers to active bank states (1–3)
 
-### Core Functions
+### core functions
 ```javascript
 // Page Management
-LaunchpadProMK3.selectPage(page);          // Switch to page 0-9 with cleanup
+LaunchpadProMK3.selectPage(page);          // switch pages 0-7 with cleanup
 LaunchpadProMK3.updateHotcuePage();        // Update Page 0 display and bank lights
 LaunchpadProMK3.updateBeatjumpPage();      // Update Page 2 display with gradients
 LaunchpadProMK3.updateBpmScalePage();      // Update Page 3 display with animations
-LaunchpadProMK3.updateLoopPage();          // Update Pages 4-5 display
-LaunchpadProMK3.updateReverseLoopPage();   // Update Pages 6-7 display
-LaunchpadProMK3.updateLoopMovePage();      // Update Page 8 display
-LaunchpadProMK3.updateLoopResizePage();    // Update Page 9 display
+LaunchpadProMK3.updateLoopPage();          // update page 4
+LaunchpadProMK3.updateReverseLoopPage();   // update page 5
+LaunchpadProMK3.updateLoopMovePage();      // update page 6
+LaunchpadProMK3.updateLoopResizePage();    // update page 7
 
 // Hotcue Management
 LaunchpadProMK3.create4LeadupDropHotcues(deck, value);  // Multi-hotcue creation
@@ -353,8 +337,8 @@ LaunchpadProMK3.sendRGB(pad, r, g, b);    // Send RGB to pad with validation
 LaunchpadProMK3.hexToRGB(hexColor);       // Convert hex to [r,g,b] array
 ```
 
-### Event Flow
-1. **Page Selection**: row2[0-4] → `handlePageButtonPress()` → `selectPage()` with cleanup
+### event flow
+1. **page selection**: row2[0-3] → `handlePageButtonPress()` → `selectPage()` with cleanup; row2[4] is slip toggle
 2. **Hotcue Operations**: main grid → hotcue activation/deletion → undo/redo stack management
 3. **Bank Switching**: Shift + row1[4-7] → `cycleHotcueBank()` → `updateHotcueBankLights()`
 4. **Clear All**: Hold row0[7] + row1[4-7] → `clearAllHotcues()` → undo stack population
