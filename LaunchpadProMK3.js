@@ -3456,67 +3456,130 @@ LaunchpadProMK3.create4LeadupDropHotcues = function (deck, value) {
   DEBUG("create4LeadupDropHotcues: hotcuePositions  creation " + C.O + hotcuePositions);
   // for each of the controls in the object;
   DEBUG("create4LeadupDropHotcues: leadupCues " + C.O + JSON.stringify(leadupCues));
-  for (const number of Object.entries(leadupCues)) {
-    DEBUG(JSON.stringify(number))
-    DEBUG("number " + C.O + number[1].control)
-    const control = number[1].control
-    const colour = number[1].colour
-    // if (colour === undefined) { engine.setValue(group, control, originalPlayPosition); return }
-    DEBUG(`control ${C.O}${control}${C.RE}   colour ${C.O}#${colour.toString(16)}`, C.G, 1)
+  // Non-blocking sequence runner to avoid busy-wait sleeps
+  const steps = Object.entries(leadupCues);
+  let idx = 0;
+
+  // Proactively cancel any in-flight sequence for this deck, then prep registries
+  try { LaunchpadProMK3.cancelHotcueSequenceTimer(deck); } catch (e) {}
+  LaunchpadProMK3._hotcueSequenceTimers = LaunchpadProMK3._hotcueSequenceTimers || {};
+  // Initialize per-deck cancellation token and store a local reference
+  LaunchpadProMK3._hotcueSequenceTokens = LaunchpadProMK3._hotcueSequenceTokens || {};
+  const token = {};
+  LaunchpadProMK3._hotcueSequenceTokens[deck] = token;
+  DEBUG("create4LeadupDropHotcues: token created for deck " + C.O + deck, C.G);
+
+  const processStep = function () {
+    // Abort early if sequence was canceled before this step
+    if (LaunchpadProMK3._hotcueSequenceTokens && LaunchpadProMK3._hotcueSequenceTokens[deck] !== token) {
+      DEBUG("create4LeadupDropHotcues: sequence canceled before step; abort", C.Y);
+      return;
+    }
+    if (idx >= steps.length) {
+      // Sequence finished: restore original play position
+      try { engine.setValue(group, "playposition", originalPlayPosition); } catch (e) {}
+      LaunchpadProMK3._hotcueSequenceTimers[deck] = null;
+      if (LaunchpadProMK3._hotcueSequenceTokens) { LaunchpadProMK3._hotcueSequenceTokens[deck] = null; }
+      return;
+    }
+
+    const number = steps[idx];
+    DEBUG(JSON.stringify(number));
+    DEBUG("number " + C.O + number[1].control);
+    const control = number[1].control;
+    const colour = number[1].colour;
+    DEBUG(`control ${C.O}${control}${C.RE}   colour ${C.O}#${colour.toString(16)}`, C.G, 1);
+
     // perform it - handle multiple controls separated by semicolon
     const controls = control.split(';');
-    DEBUG(`create4LeadupDropHotcues: controls ${C.O}${controls}`, C.G, 1)
+    DEBUG(`create4LeadupDropHotcues: controls ${C.O}${controls}`, C.G, 1);
+
+    // Trigger control(s) immediately via script.triggerControl for proper on/off pulsing
     for (const singleControl of controls) {
-      DEBUG(`create4LeadupDropHotcues: singleControl ${C.O}${singleControl}`, C.G, 1)
+      DEBUG(`create4LeadupDropHotcues: singleControl ${C.O}${singleControl}`, C.G, 1);
       const trimmedControl = singleControl.trim();
       if (trimmedControl) {
-        engine.setValue(group, trimmedControl, 1);
-        DEBUG(`create4LeadupDropHotcues: ${C.O}${trimmedControl}${C.RE}`, C.G, 1)
-        LaunchpadProMK3.sleep(100);
+        try { script.triggerControl(group, trimmedControl, 50); } catch (e) { try { engine.setValue(group, trimmedControl, 1); } catch (e2) {} }
+        DEBUG(`create4LeadupDropHotcues: ${C.O}${trimmedControl}${C.RE}`, C.G, 1);
       }
     }
-    // pause so the jump takes effect
-    // how far through the track is the playhead now, between 0 and 1
-    const playPosition = engine.getValue(group, "playposition");
-    // if it's before 0, aka the start of the track then..
-    DEBUG("create4LeadupDropHotcues: playPosition " + C.O + playPosition)
-    if (playPosition < 0 || playPosition >= 1) {
-      // out of bounds; skip
-      DEBUG("create4LeadupDropHotcues: out-of-bounds playPosition; skipping", C.O)
-    } else {
-      // find the first unused hotcue
-      DEBUG("create4LeadupDropHotcues: hotcuePositions mid " + C.O + hotcuePositions)
-      // how many samples into the track right now?
-      const samplesNow = samplesTotal * playPosition;
-      DEBUG("create4LeadupDropHotcues: samplesNow " + C.O + samplesNow)
-      // has this sample position got a hotcue already?
-      //if (!hotcuePositions.includes(samplesNow)) {
-      if (!isCloseEnough(hotcuePositions, samplesNow, 3)) {
-        const hotcueSpace = hotcuePositions.findIndex((hotcueSpaceFree) => hotcueSpaceFree === -1)
-        DEBUG("create4LeadupDropHotcues: hotcueSpace " + C.O + hotcueSpace)
-        // if there is no hotcue space then give up
-        if (hotcueSpace === -1) { DEBUG("create4LeadupDropHotcues: no hotcue space", C.R); return }
-        // colate control
-        const hotcueSpaceTitle = "hotcue_" + (hotcueSpace + 1)
-        DEBUG("create4LeadupDropHotcues: hotcueSpaceTitle " + C.O + hotcueSpaceTitle)
-        // create new hotcue
-        engine.setValue(group, hotcueSpaceTitle + "_set", 1);
-        // give that hotcue its colour
-        engine.setValue(group, hotcueSpaceTitle + "_color", colour); // green
-        // what is its pad?
-        DEBUG("create4LeadupDropHotcues: LaunchpadProMK3.decks[deck].deckMainSliceStartIndex " + C.O + LaunchpadProMK3.decks[deck].deckMainSliceStartIndex)
-        const pad = LaunchpadProMK3.decks[deck].deckMainSliceStartIndex + hotcueSpace;
-        DEBUG("create4LeadupDropHotcues: pad " + C.O + pad)
-        // add to undo list
-        LaunchpadProMK3.lastHotcue.unshift([group, hotcueSpaceTitle, pad, deck, colour]);
 
-        // add to existing check
-        hotcuePositions[hotcueSpace] = samplesNow;
-        DEBUG("create4LeadupDropHotcues: hotcuePositions end " + C.O + hotcuePositions, C.R, 0, 1)
+    // After a short delay, read position and set hotcue, then proceed
+    let localTimerId = null;
+    DEBUG("create4LeadupDropHotcues: scheduling timer; prev id " + C.O + (LaunchpadProMK3._hotcueSequenceTimers[deck] || "none") + C.RE + " deck " + C.O + deck, C.G);
+    localTimerId = engine.beginTimer(100, function () {
+      DEBUG("create4LeadupDropHotcues: timer fired id " + C.O + localTimerId + C.RE + " deck " + C.O + deck, C.G);
+      // One-shot timer: just clear stored id
+      LaunchpadProMK3._hotcueSequenceTimers[deck] = null;
+
+      // Abort if sequence was canceled mid-tick
+      if (LaunchpadProMK3._hotcueSequenceTokens && LaunchpadProMK3._hotcueSequenceTokens[deck] !== token) {
+        DEBUG("create4LeadupDropHotcues: timer fired after cancel; abort", C.Y);
+        try { engine.setValue(group, "playposition", originalPlayPosition); } catch (e) {}
+        return;
       }
-    }
-    engine.setValue(group, control, originalPlayPosition)
+
+      // Validate deck is still loaded
+      if (engine.getValue(group, "track_loaded") !== 1) {
+        DEBUG("create4LeadupDropHotcues: deck unloaded mid-sequence; aborting", C.Y);
+        return;
+      }
+
+      // how far through the track is the playhead now, between 0 and 1
+      const playPosition = engine.getValue(group, "playposition");
+      DEBUG("create4LeadupDropHotcues: playPosition " + C.O + playPosition);
+      if (playPosition >= 0 && playPosition < 1) {
+        // find the first unused hotcue
+        DEBUG("create4LeadupDropHotcues: hotcuePositions mid " + C.O + hotcuePositions);
+        // how many samples into the track right now?
+        const samplesNow = samplesTotal * playPosition;
+        DEBUG("create4LeadupDropHotcues: samplesNow " + C.O + samplesNow);
+        // has this sample position got a hotcue already?
+        if (!isCloseEnough(hotcuePositions, samplesNow, 3)) {
+          const hotcueSpace = hotcuePositions.findIndex((hotcueSpaceFree) => hotcueSpaceFree === -1);
+          DEBUG("create4LeadupDropHotcues: hotcueSpace " + C.O + hotcueSpace);
+          // if there is no hotcue space then give up
+          if (hotcueSpace !== -1) {
+            const hotcueSpaceTitle = "hotcue_" + (hotcueSpace + 1);
+            DEBUG("create4LeadupDropHotcues: hotcueSpaceTitle " + C.O + hotcueSpaceTitle);
+            // create new hotcue
+            engine.setValue(group, hotcueSpaceTitle + "_set", 1);
+            // give that hotcue its colour
+            engine.setValue(group, hotcueSpaceTitle + "_color", colour);
+            // what is its pad?
+            DEBUG("create4LeadupDropHotcues: LaunchpadProMK3.decks[deck].deckMainSliceStartIndex " + C.O + LaunchpadProMK3.decks[deck].deckMainSliceStartIndex);
+            const pad = LaunchpadProMK3.decks[deck].deckMainSliceStartIndex + hotcueSpace;
+            DEBUG("create4LeadupDropHotcues: pad " + C.O + pad);
+            // add to undo list
+            LaunchpadProMK3.lastHotcue.unshift([group, hotcueSpaceTitle, pad, deck, colour]);
+
+            // add to existing check
+            hotcuePositions[hotcueSpace] = samplesNow;
+            DEBUG("create4LeadupDropHotcues: hotcuePositions end " + C.O + hotcuePositions, C.R, 0, 1);
+          } else {
+            DEBUG("create4LeadupDropHotcues: no hotcue space", C.R);
+          }
+        }
+      } else {
+        // out of bounds; skip
+        DEBUG("create4LeadupDropHotcues: out-of-bounds playPosition; skipping", C.O);
+      }
+
+      // Next step
+      idx += 1;
+      // Check cancellation before proceeding to next step
+      if (LaunchpadProMK3._hotcueSequenceTokens && LaunchpadProMK3._hotcueSequenceTokens[deck] !== token) {
+        DEBUG("create4LeadupDropHotcues: canceled before next step; stop", C.Y);
+        try { engine.setValue(group, "playposition", originalPlayPosition); } catch (e) {}
+        return;
+      }
+      processStep();
+    }, true);
+    LaunchpadProMK3._hotcueSequenceTimers[deck] = localTimerId;
+    DEBUG("create4LeadupDropHotcues: scheduled id " + C.O + localTimerId + C.RE + " deck " + C.O + deck, C.G);
   };
+
+  processStep();
 
   //for (let X = hotcueRightmost; X <= 19; X++) {
   //  LaunchpadProMK3.sleep(25);
