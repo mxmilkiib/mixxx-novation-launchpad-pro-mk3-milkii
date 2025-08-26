@@ -2415,6 +2415,54 @@ LaunchpadProMK3.Deck = function (deckNum) {
 
 
 
+  // MARK: makeConn loop_enabled
+  // keep internal loop trackers and LEDs in sync with external loop changes
+  engine.makeConnection(channel, "loop_enabled", function (value) {
+    try {
+      DEBUG(">> makeConnection: " + C.O + "loop_enabled" + C.RE + " change on deck " + C.O + deckNum + C.RE + "   value " + C.O + value, C.G, 2);
+      // when the engine loop gets disabled, clear persistent loop latches; do not touch roll latches here
+      if (value === 0) {
+        // value === 0: loop disabled externally — clear persistent loop latches
+        try {
+          LaunchpadProMK3.loopActivePadByDeck = LaunchpadProMK3.loopActivePadByDeck || { 1: null, 2: null, 3: null, 4: null };
+          LaunchpadProMK3.loopActivePadByDeck[deckNum] = null;
+        } catch (e) { DEBUG("loop_enabled handler: clear loopActivePadByDeck exception: " + e, C.Y); }
+        try {
+          // Clear one-deck latch if this deck is currently selected
+          if (LaunchpadProMK3.oneDeckActiveLoopPad && (LaunchpadProMK3.oneDeckCurrent === deckNum)) {
+            LaunchpadProMK3.oneDeckActiveLoopPad = null;
+          }
+        } catch (e) { DEBUG("loop_enabled handler: clear oneDeckActiveLoopPad exception: " + e, C.Y); }
+      }
+      // Refresh loop LEDs on the active page
+      try { LaunchpadProMK3.requestLoopLEDRefresh(LaunchpadProMK3.currentPage); } catch (e) {}
+    } catch (e) {
+      DEBUG("loop_enabled connection handler exception: " + e, C.R);
+    }
+  });
+
+  // MARK: makeConn loop_remove
+  // Clear internal latches immediately when a loop is removed externally
+  engine.makeConnection(channel, "loop_remove", function (value) {
+    try {
+      DEBUG(">> makeConnection: " + C.O + "loop_remove" + C.RE + " change on deck " + C.O + deckNum + C.RE + "   value " + C.O + value, C.G, 2);
+      if (value !== 0) {
+        try {
+          LaunchpadProMK3.loopActivePadByDeck = LaunchpadProMK3.loopActivePadByDeck || { 1: null, 2: null, 3: null, 4: null };
+          LaunchpadProMK3.loopActivePadByDeck[deckNum] = null;
+        } catch (e) { DEBUG("loop_remove handler: clear loopActivePadByDeck exception: " + e, C.Y); }
+        try {
+          if (LaunchpadProMK3.oneDeckCurrent === deckNum) {
+            LaunchpadProMK3.oneDeckActiveLoopPad = null;
+          }
+        } catch (e) { DEBUG("loop_remove handler: clear oneDeckActiveLoopPad exception: " + e, C.Y); }
+        try { LaunchpadProMK3.requestLoopLEDRefresh(LaunchpadProMK3.currentPage); } catch (e) {}
+      }
+    } catch (e) {
+      DEBUG("loop_remove connection handler exception: " + e, C.R);
+    }
+  });
+
   DEBUG("Deck(" + C.O + deckNum + C.G + ") ### init reconnect Components properties to group", C.G, 1);
   // Set the group properties of the above Components and connect their output callback functions
   // This ensures all hotcue and sidepad components are properly connected to the deck
