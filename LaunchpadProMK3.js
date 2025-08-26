@@ -3681,18 +3681,8 @@ LaunchpadProMK3.updateOneDeckPage = function () {
     
     DEBUG("updateOneDeckPage: selected deck " + C.O + selectedDeck + C.RE + "   deckColour " + C.O + "#" + deckColour + C.RE + "   deckRgb " + C.O + deckRgb, C.G);
     
-    // Gradients per row group (8, 16, or 32 pads depending on section)
-    // rows 1-4: loop visuals (32 pads) – top two rows reverse (blue), bottom two forward (towards deck colour)
-    {
-      const pads14 = LaunchpadProMK3.getMainGridPadAddressesForRows([1, 2, 3, 4]);
-      // A half (rows 1-2): cool blue gradient indicating reverse
-      const loopAStart = [0, 30, 100];
-      const loopAEnd   = [10, 10, 60];
-      // B half (rows 3-4): purple accent towards deck colour indicating forward
-      const loopBStart = [60, 0, 80];
-      const loopBEnd   = deckRgb;
-      LaunchpadProMK3.applySplitGradientToSpecificPads(selectedDeck, pads14, loopAStart, loopAEnd, loopBStart, loopBEnd);
-    }
+    // Delegate rows 1–4 loop visuals to targeted renderer so it stays in sync with mapping
+    try { LaunchpadProMK3.updateOneDeckLoopLighting(); } catch (e) { DEBUG("updateOneDeckPage: loop lighting exception: " + e, C.Y); }
 
     // rows 5-6: beatjump (handled by dedicated function, 16 pads)
     LaunchpadProMK3.setupOneDeckBeatjumpLighting(selectedDeck);
