@@ -113,13 +113,14 @@ LaunchpadProMK3.sidepads = [80, 70, 89, 79, 60, 50, 69, 59, ...];
 ```
 
 ### page system
-the controller operates in 8 pages, organized in four primary/alternate pairs selected from `row2`:
+the controller operates in 10 pages (0–9). pages 0–7 are organized in four primary/alternate pairs selected from `row2`. animation pages are on 8/9 via shift + row2[3].
 
 - **row2[0]**: page 0 ↔ page 1
 - **row2[1]**: page 2 ↔ page 3  
 - **row2[2]**: page 4 ↔ page 5
-- **row2[3]**: page 6 ↔ page 7
-- **row2[4]**: slip toggle (not a page)
+- **row2[3]**: page 6 ↔ page 7 (shift selects 8/9 animations)
+- **row1[4]**: slip toggle (global)  
+- **row2[5]**: undo hotcue, **row2[6]**: keep playing, **row2[7]**: split cue volume switch (unvol)
 
 #### Page 0: Hotcues & Intro/Outro Markers
 **Main Grid**: Hotcues per deck with per-deck banking system
@@ -172,8 +173,8 @@ the controller operates in 8 pages, organized in four primary/alternate pairs se
 #### page 7: loop resize
 **main grid**: resize active loop with halve/double patterns
 
-#### page 8: animations (aux)
-reserved animations/aux page; not part of row2 page selection
+#### page 8/9: animations (aux)
+two animation/aux pages accessed by shift + row2[3]
 
 ## Control Mappings
 
@@ -185,21 +186,21 @@ reserved animations/aux page; not part of row2 page selection
 | 2   | hotcue color previous | affects `lastHotcueChannel` |
 | 3   | hotcue color next | affects `lastHotcueChannel` |
 | 4   | selected deck swatch | paints to one-deck selected deck color |
-| 5   | exit-on-release toggle | loop persistence control (pages 1/4/5) |
-| 6   | loop type toggle | roll vs set (pages 1/4/5) |
-| 7   | hold: clear-all-hotcues; tap: toggle all effects | used with row1 deck buttons on page 0 |
+| 5   | exit-on-release toggle | loop persistence control (pages 1/4/5/6/7) |
+| 6   | loop type toggle | roll vs set (pages 1/4/5/6/7) |
+| 7   | toggle all effects | no longer used as clear-all modifier |
 
 ### row 1 (middle controls)
-| Pad | Normal Function | Shift Function | Hold Row0[7] |
-|-----|-----------------|----------------|---------------|
-| 0   | create multi hotcues (deck 3) | shift: cycle bank | hold row0[7]: clear all |
-| 1   | create multi hotcues (deck 1) | shift: cycle bank | hold row0[7]: clear all |
-| 2   | create multi hotcues (deck 2) | shift: cycle bank | hold row0[7]: clear all |
-| 3   | create multi hotcues (deck 4) | shift: cycle bank | hold row0[7]: clear all |
-| 4   | shift modifier | holds alt functions |
-| 5   | redo last hotcue | - | - |
-| 6   | alt modifier | used for clear-all mode |
-| 7   | split cue (headSplit) toggle | - | - |
+| Pad | Normal Function | Shift Function | Alt (row1[6]) |
+|-----|-----------------|----------------|----------------|
+| 0   | create multi hotcues (deck 3) | cycle bank | alt: clear all deck 3 |
+| 1   | create multi hotcues (deck 1) | cycle bank | alt: clear all deck 1 |
+| 2   | create multi hotcues (deck 2) | cycle bank | alt: clear all deck 2 |
+| 3   | create multi hotcues (deck 4) | cycle bank | alt: clear all deck 4 |
+| 4   | slip toggle | global slip for all decks |
+| 5   | redo last hotcue | - |
+| 6   | alt modifier | hold to enable clear-all on pads 0–3 |
+| 7   | split cue (headSplit) toggle | - |
 
 ### row 2 (bottom controls)
 | Pad | Function |
@@ -207,8 +208,8 @@ reserved animations/aux page; not part of row2 page selection
 | 0   | toggle page 0 ↔ 1 | hotcues ↔ one-deck |
 | 1   | toggle page 2 ↔ 3 | beatjump ↔ bpm scale |
 | 2   | toggle page 4 ↔ 5 | forward loops ↔ reverse loops |
-| 3   | toggle page 6 ↔ 7 | loop move ↔ loop resize |
-| 4   | slip toggle | global slip for all decks |
+| 3   | toggle page 6 ↔ 7 | loop move ↔ loop resize (shift: 8/9 animations) |
+| 4   | shift modifier | holds alt functions (used for animations access) |
 | 5   | undo last hotcue | - |
 | 6   | keep playing mode toggle | prevents stop-on-release |
 | 7   | split cue volume switch (unvol) | enhanced unvol system |
@@ -296,7 +297,9 @@ reserved animations/aux page; not part of row2 page selection
 ### MIDI Communication
 ```javascript
 // SysEx message structure for LED control
-LaunchpadProMK3.sendSysEx([0x03, padAddress, red, green, blue])
+// Full message is wrapped with manufacturer header/footer internally:
+//  F0 00 20 29 02 0E 03 03 pad r g b F7
+LaunchpadProMK3.sendSysEx([0x03, 0x03, padAddress, red, green, blue])
 
 // RGB color conversion and direct control
 LaunchpadProMK3.hexToRGB(hexColor) // Returns [r, g, b] array
