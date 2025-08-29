@@ -513,7 +513,7 @@ LaunchpadProMK3.initVars = function () {
   LaunchpadProMK3.slipEnabled = false;
 
   // Track global reverse roll state (dedicated toggle applies to all decks)
-  LaunchpadProMK3.buttons.reverseRollEnabled = false;
+  LaunchpadProMK3.reverseRollEnabled = false;
 
   // Hotcue bank switching system - now per-deck to support individual pagination
   // Each deck has its own hotcue bank: 1 (hotcues 1-16), 2 (hotcues 17-32), 3 (hotcues 33-36)
@@ -674,6 +674,9 @@ LaunchpadProMK3.initExtras = function () {
 
   // dedicated slip toggle (moved to row1 pad 5)
   LaunchpadProMK3.buttons.slipToggle = LaunchpadProMK3.row1[4];
+  
+  // momentary reverse roll (unused spare control – top-left CC 0x5A)
+  LaunchpadProMK3.buttons.reverseRollMomentary = 0x5A
   // Helper to refresh slip LED from current LaunchpadProMK3.slipEnabled
   LaunchpadProMK3.refreshSlipLed = function() {
     const on = !!LaunchpadProMK3.slipEnabled;
@@ -1820,19 +1823,24 @@ LaunchpadProMK3.initMidiHandlers = function () {
     }
   });
   
-  // pad to enable/disable reverseroll
-  midi.makeInputHandler(0xB0, LaunchpadProMK3.buttons.reverseRollToggle, (channel, control, value, status, _group) => {
-    if (value !== 0) {
-      LaunchpadProMK3.toggleReverseRoll();
-    }
-  });
-
-  // Initial LED for reverse roll toggle based on current state
-  if (LaunchpadProMK3.buttons.reverseRollEnabled) {
-    LaunchpadProMK3.sendRGB(LaunchpadProMK3.buttons.reverseRollToggle, 0x5F, 0x7F, 0x00);
-  } else {
-    LaunchpadProMK3.sendRGB(LaunchpadProMK3.buttons.reverseRollToggle, 0x20, 0x10, 0x00);
-  }
+  // momentary reverse roll pad (press = engage; release = disengage)
+  // bright scarlet when idle, darker scarlet while held
+  (function() {
+    const brightScarlet = [0xFF, 0x28, 0x10];
+    const darkScarlet   = [0x40, 0x06, 0x04];
+    const pad = LaunchpadProMK3.buttons.reverseRollMomentary;
+    midi.makeInputHandler(0xB0, pad, (channel, control, value, status, _group) => {
+      if (value !== 0) {
+        try { engine.setValue("[Master]", "reverseRoll", 1); } catch (e) {}
+        try { LaunchpadProMK3.sendRGB(pad, darkScarlet[0], darkScarlet[1], darkScarlet[2]); } catch (e) {}
+      } else {
+        try { engine.setValue("[Master]", "reverseRoll", 0); } catch (e) {}
+        try { LaunchpadProMK3.sendRGB(pad, brightScarlet[0], brightScarlet[1], brightScarlet[2]); } catch (e) {}
+      }
+    });
+    // initial LED (idle)
+    try { LaunchpadProMK3.sendRGB(pad, brightScarlet[0], brightScarlet[1], brightScarlet[2]); } catch (e) {}
+  })();
   
 };
 
