@@ -1830,11 +1830,17 @@ LaunchpadProMK3.initMidiHandlers = function () {
     const darkScarlet   = [0x40, 0x06, 0x04];
     const pad = LaunchpadProMK3.buttons.reverseRollMomentary;
     midi.makeInputHandler(0xB0, pad, (channel, control, value, status, _group) => {
+      // choose a sensible target deck: last interacted hotcue deck, then one-deck selection, else Deck 1
+      let targetChannel = LaunchpadProMK3.lastHotcueChannel;
+      if (typeof targetChannel === "undefined" || !targetChannel) {
+        const fallbackDeck = LaunchpadProMK3.oneDeckCurrent || 1;
+        targetChannel = `[Channel${fallbackDeck}]`;
+      }
       if (value !== 0) {
-        try { engine.setValue("[Master]", "reverseRoll", 1); } catch (e) {}
+        try { engine.setValue(targetChannel, "reverseRoll", 1); } catch (e) {}
         try { LaunchpadProMK3.sendRGB(pad, darkScarlet[0], darkScarlet[1], darkScarlet[2]); } catch (e) {}
       } else {
-        try { engine.setValue("[Master]", "reverseRoll", 0); } catch (e) {}
+        try { engine.setValue(targetChannel, "reverseRoll", 0); } catch (e) {}
         try { LaunchpadProMK3.sendRGB(pad, brightScarlet[0], brightScarlet[1], brightScarlet[2]); } catch (e) {}
       }
     });
@@ -1845,13 +1851,19 @@ LaunchpadProMK3.initMidiHandlers = function () {
 };
 
 LaunchpadProMK3.toggleReverseRoll = function() {
+  // pick deck like above; default to Deck 1
+  let targetChannel = LaunchpadProMK3.lastHotcueChannel;
+  if (typeof targetChannel === "undefined" || !targetChannel) {
+    const fallbackDeck = LaunchpadProMK3.oneDeckCurrent || 1;
+    targetChannel = `[Channel${fallbackDeck}]`;
+  }
   if (LaunchpadProMK3.reverseRollEnabled) {
     LaunchpadProMK3.reverseRollEnabled = false;
-    engine.setValue("[Master]", "reverseRoll", 0);
+    try { engine.setValue(targetChannel, "reverseRoll", 0); } catch (e) {}
     DEBUG("Reverse roll disabled", C.Y);
   } else {
     LaunchpadProMK3.reverseRollEnabled = true;
-    engine.setValue("[Master]", "reverseRoll", 1);
+    try { engine.setValue(targetChannel, "reverseRoll", 1); } catch (e) {}
     DEBUG("Reverse roll enabled", C.Y);
   }
 };
