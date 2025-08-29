@@ -1830,12 +1830,9 @@ LaunchpadProMK3.initMidiHandlers = function () {
     const darkScarlet   = [0x40, 0x06, 0x04];
     const pad = LaunchpadProMK3.buttons.reverseRollMomentary;
     midi.makeInputHandler(0xB0, pad, (channel, control, value, status, _group) => {
-      // choose a sensible target deck: last interacted hotcue deck, then one-deck selection, else Deck 1
-      let targetChannel = LaunchpadProMK3.lastHotcueChannel;
-      if (typeof targetChannel === "undefined" || !targetChannel || targetChannel === "undefined") {
-        const fallbackDeck = LaunchpadProMK3.oneDeckCurrent || 1;
-        targetChannel = `[Channel${fallbackDeck}]`;
-      }
+      // always act on the currently selected deck (default to Deck 1)
+      const selectedDeck = LaunchpadProMK3.oneDeckCurrent || 1;
+      const targetChannel = `[Channel${selectedDeck}]`;
       if (value !== 0) {
         try { engine.setValue(targetChannel, "reverseroll", 1); } catch (e) {}
         try { LaunchpadProMK3.sendRGB(pad, darkScarlet[0], darkScarlet[1], darkScarlet[2]); } catch (e) {}
@@ -1852,11 +1849,8 @@ LaunchpadProMK3.initMidiHandlers = function () {
 
 LaunchpadProMK3.toggleReverseRoll = function() {
   // pick deck like above; default to Deck 1
-  let targetChannel = LaunchpadProMK3.lastHotcueChannel;
-  if (typeof targetChannel === "undefined" || !targetChannel || targetChannel === "undefined") {
-    const fallbackDeck = LaunchpadProMK3.oneDeckCurrent || 1;
-    targetChannel = `[Channel${fallbackDeck}]`;
-  }
+  const selectedDeck = LaunchpadProMK3.oneDeckCurrent || 1;
+  const targetChannel = `[Channel${selectedDeck}]`;
   if (LaunchpadProMK3.reverseRollEnabled) {
     LaunchpadProMK3.reverseRollEnabled = false;
     try { engine.setValue(targetChannel, "reverseroll", 0); } catch (e) {}
