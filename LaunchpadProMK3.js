@@ -465,8 +465,8 @@ LaunchpadProMK3.initVars = function () {
   LaunchpadProMK3.deckLoadedInactiveDimscale = 0.4 // Medium for loaded but inactive
   LaunchpadProMK3.deckUnloadedDimscale = 0.2       // Dim for unloaded decks
   // One-deck page specific brightness for the selected deck when unloaded
-  // Use full brightness on page 1 (ratio squared => 1.0) for clarity
-  LaunchpadProMK3.oneDeckUnloadedDimscale = 1.0
+  // Lower this so unloaded looks clearly dimmer than loaded (ratio^2)
+  LaunchpadProMK3.oneDeckUnloadedDimscale = 0.85
 
   // Brightness/contrast control variables for dimmed pads
   // Controls the visual feedback for loaded vs unloaded decks
