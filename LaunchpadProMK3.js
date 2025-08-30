@@ -32,7 +32,7 @@
 //   - Pads 5–6: Loop mode switches (exit-on-release toggle; roll vs set)
 //   - Pad 8: Effects toggle / clear-all modifier
 // • Row1
-//   - Pads 1–4: Deck hotcue creation buttons; on Page 1 these select the deck being controlled
+//   - Pads 1–4: on page 0 deck select (no shift), shift = multi-hotcue create; on page 1 these select the deck being controlled
 //   - Pad 6: Redo hotcue
 //   - Pad 7: Alt modifier
 //   - Pad 8: Split cue toggle
@@ -464,6 +464,9 @@ LaunchpadProMK3.initVars = function () {
   LaunchpadProMK3.deckLoadedActiveDimscale = 0.85  // Bright for active hotcues
   LaunchpadProMK3.deckLoadedInactiveDimscale = 0.4 // Medium for loaded but inactive
   LaunchpadProMK3.deckUnloadedDimscale = 0.2       // Dim for unloaded decks
+  // One-deck page specific brightness for the selected deck when unloaded
+  // Use full brightness on page 1 (ratio squared => 1.0) for clarity
+  LaunchpadProMK3.oneDeckUnloadedDimscale = 1.0
 
   // Brightness/contrast control variables for dimmed pads
   // Controls the visual feedback for loaded vs unloaded decks
@@ -634,24 +637,24 @@ LaunchpadProMK3.initExtras = function () {
   // Initialize hotcue bank lights
   LaunchpadProMK3.updateHotcueBankLights();
 
-  // Three-function hotcue controls for row 1 pads 1-4:
-  // - Default: Create multiple hotcues (4 leadup + drop + 3 outro)
-  // - Shift held: Cycle hotcue bank (3-bank system)
-  // - Row0 pad 8 held: Clear all hotcues for the associated deck
-  // Note: Deck mapping is based on physical order, not deck number
-  // Row1 pad 1: Controls deck 3 (magenta, physical order 1)
+  // three-function controls for row 1 pads 1-4 on page 0:
+  // - default: select deck/channel (highlights selection)
+  // - shift held: create multiple hotcues (4 leadup + drop + 3 outro)
+  // - alt held: clear all hotcues for the associated deck
+  // note: deck mapping is based on physical order, not deck number
+  // row1 pad 1: maps to physical order 1
   LaunchpadProMK3.buttons.deckButton1 = LaunchpadProMK3.row1[0]
   // Handler moved to initMidiHandlers()
 
-  // Row1 pad 2: Controls deck 1 (blue, physical order 2)
+  // row1 pad 2: maps to physical order 2
   LaunchpadProMK3.buttons.deckButton2 = LaunchpadProMK3.row1[1]
   // Handler moved to initMidiHandlers()
 
-  // Row1 pad 3: Controls deck 2 (yellow, physical order 3)
+  // row1 pad 3: maps to physical order 3
   LaunchpadProMK3.buttons.deckButton3 = LaunchpadProMK3.row1[2]
   // Handler moved to initMidiHandlers()
 
-  // Row1 pad 4: Controls deck 4 (green, physical order 4)
+  // row1 pad 4: maps to physical order 4
   LaunchpadProMK3.buttons.deckButton4 = LaunchpadProMK3.row1[3]
   // Handler moved to initMidiHandlers()
 
@@ -1563,13 +1566,18 @@ LaunchpadProMK3.initMidiHandlers = function () {
     if (value !== 0 && LaunchpadProMK3.currentPage === 0) {  // Only on hotcue page
       if (LaunchpadProMK3.altHeld) {
         LaunchpadProMK3.clearAllHotcues(3);
-        DEBUG("Row1 pad 1 + Row0 pad 8: Clear all hotcues on deck 3", C.R);
+        DEBUG("Row1 pad 1 + Alt: Clear all hotcues on deck 3", C.R);
       } else if (LaunchpadProMK3.shiftHeld === 1) {
-        LaunchpadProMK3.cycleHotcueBank(3);
-        DEBUG("Row1 pad 1 + Shift: Cycle hotcue bank for deck 3", C.G);
-      } else {
         LaunchpadProMK3.create4LeadupDropHotcues(3, value);
-        DEBUG("Row1 pad 1: Create multiple hotcues for deck 3", C.Y);
+        DEBUG("Row1 pad 1 + Shift: Create multiple hotcues for deck 3", C.Y);
+      } else {
+        const deck = parseInt(LaunchpadProMK3.getDeckFromOrder(1), 10);
+        if (!isNaN(deck)) {
+          LaunchpadProMK3.oneDeckCurrent = deck;
+          try { LaunchpadProMK3.updateRow0SelectedDeckSwatch(); } catch (e) {}
+          try { LaunchpadProMK3.setupOneDeckRow1DeckButtons(deck); } catch (e) {}
+          DEBUG("Row1 pad 1: Selected deck " + deck, C.G);
+        }
       }
     }
     if (value !== 0 && LaunchpadProMK3.currentPage === 1) {  // Only on one deck page
@@ -1588,13 +1596,18 @@ LaunchpadProMK3.initMidiHandlers = function () {
     if (value !== 0 && LaunchpadProMK3.currentPage === 0) {  // Only on hotcue page
       if (LaunchpadProMK3.altHeld) {
         LaunchpadProMK3.clearAllHotcues(1);
-        DEBUG("Row1 pad 2 + Row0 pad 8: Clear all hotcues on deck 1", C.R);
+        DEBUG("Row1 pad 2 + Alt: Clear all hotcues on deck 1", C.R);
       } else if (LaunchpadProMK3.shiftHeld === 1) {
-        LaunchpadProMK3.cycleHotcueBank(1);
-        DEBUG("Row1 pad 2 + Shift: Cycle hotcue bank for deck 1", C.G);
-      } else {
         LaunchpadProMK3.create4LeadupDropHotcues(1, value);
-        DEBUG("Row1 pad 2: Create multiple hotcues for deck 1", C.Y);
+        DEBUG("Row1 pad 2 + Shift: Create multiple hotcues for deck 1", C.Y);
+      } else {
+        const deck = parseInt(LaunchpadProMK3.getDeckFromOrder(2), 10);
+        if (!isNaN(deck)) {
+          LaunchpadProMK3.oneDeckCurrent = deck;
+          try { LaunchpadProMK3.updateRow0SelectedDeckSwatch(); } catch (e) {}
+          try { LaunchpadProMK3.setupOneDeckRow1DeckButtons(deck); } catch (e) {}
+          DEBUG("Row1 pad 2: Selected deck " + deck, C.G);
+        }
       }
     }
     if (value !== 0 && LaunchpadProMK3.currentPage === 1) {  // Only on one deck page
@@ -1613,13 +1626,18 @@ LaunchpadProMK3.initMidiHandlers = function () {
     if (value !== 0 && LaunchpadProMK3.currentPage === 0) {  // Only on hotcue page
       if (LaunchpadProMK3.altHeld) {
         LaunchpadProMK3.clearAllHotcues(2);
-        DEBUG("Row1 pad 3 + Row0 pad 8: Clear all hotcues on deck 2", C.R);
+        DEBUG("Row1 pad 3 + Alt: Clear all hotcues on deck 2", C.R);
       } else if (LaunchpadProMK3.shiftHeld === 1) {
-        LaunchpadProMK3.cycleHotcueBank(2);
-        DEBUG("Row1 pad 3 + Shift: Cycle hotcue bank for deck 2", C.G);
-      } else {
         LaunchpadProMK3.create4LeadupDropHotcues(2, value);
-        DEBUG("Row1 pad 3: Create multiple hotcues for deck 2", C.Y);
+        DEBUG("Row1 pad 3 + Shift: Create multiple hotcues for deck 2", C.Y);
+      } else {
+        const deck = parseInt(LaunchpadProMK3.getDeckFromOrder(3), 10);
+        if (!isNaN(deck)) {
+          LaunchpadProMK3.oneDeckCurrent = deck;
+          try { LaunchpadProMK3.updateRow0SelectedDeckSwatch(); } catch (e) {}
+          try { LaunchpadProMK3.setupOneDeckRow1DeckButtons(deck); } catch (e) {}
+          DEBUG("Row1 pad 3: Selected deck " + deck, C.G);
+        }
       }
     }
     if (value !== 0 && LaunchpadProMK3.currentPage === 1) {  // Only on one deck page
@@ -1638,13 +1656,18 @@ LaunchpadProMK3.initMidiHandlers = function () {
     if (value !== 0 && LaunchpadProMK3.currentPage === 0) {  // Only on hotcue page
       if (LaunchpadProMK3.altHeld) {
         LaunchpadProMK3.clearAllHotcues(4);
-        DEBUG("Row1 pad 4 + Row0 pad 8: Clear all hotcues on deck 4", C.R);
+        DEBUG("Row1 pad 4 + Alt: Clear all hotcues on deck 4", C.R);
       } else if (LaunchpadProMK3.shiftHeld === 1) {
-        LaunchpadProMK3.cycleHotcueBank(4);
-        DEBUG("Row1 pad 4 + Shift: Cycle hotcue bank for deck 4", C.G);
-      } else {
         LaunchpadProMK3.create4LeadupDropHotcues(4, value);
-        DEBUG("Row1 pad 4: Create multiple hotcues for deck 4", C.Y);
+        DEBUG("Row1 pad 4 + Shift: Create multiple hotcues for deck 4", C.Y);
+      } else {
+        const deck = parseInt(LaunchpadProMK3.getDeckFromOrder(4), 10);
+        if (!isNaN(deck)) {
+          LaunchpadProMK3.oneDeckCurrent = deck;
+          try { LaunchpadProMK3.updateRow0SelectedDeckSwatch(); } catch (e) {}
+          try { LaunchpadProMK3.setupOneDeckRow1DeckButtons(deck); } catch (e) {}
+          DEBUG("Row1 pad 4: Selected deck " + deck, C.G);
+        }
       }
     }
     if (value !== 0 && LaunchpadProMK3.currentPage === 1) {  // Only on one deck page
@@ -2046,7 +2069,7 @@ LaunchpadProMK3.Deck = function (deckNum) {
                 }
               } else if (LaunchpadProMK3.shiftHeld === 1) {
                 if (value !== 0) {
-                  script.triggerControl(selectedChannel, "hotcue_" + actualHotcueNum + "_clear", 50);
+                  script.triggerControl(selectedChannel, "hotcue_" + actualHotcueNum + "_clear", 50);image
                   LaunchpadProMK3.updateHotcuePages(selectedDeck);
                 }
               }
@@ -3509,20 +3532,20 @@ LaunchpadProMK3.getLoopGradientPalette = function (deckRgb, page) {
   const deck = (Array.isArray(deckRgb) && deckRgb.length >= 3) ? deckRgb : [127, 127, 127];
   // Requested palettes
   // Forward (smallest -> longest)
-  const aqua        = [0, 127, 127];   // aqua blue
-  const blueViolet  = [57, 0, 127];    // blue violet
+  const aqua        = [0, 255, 255];   // aqua blue (brightened for page 1 clarity)
+  const blueViolet  = [114, 0, 255];   // blue violet (brightened for page 1 clarity)
   // Reverse (smallest -> longest)
   const ochre       = [127, 80, 20];   // ochre orange
   const plumRed     = [127, 0, 54];    // plum red
   // Keep existing accents for pages 6/7
-  const blue        = [0, 30, 100];
-  const red        = [100, 30, 0];
-  const purple      = [60, 0, 80];
-  const neutralA = [20, 20, 20];
-  const neutralB = [30, 30, 30];
-  const warm     = [100, 60, 20];
-  const blueAccent = [0, 0, 127]; // blue accent
-  const purpleAccent = [127, 0, 127]; // purple accent
+  const blue        = [0, 60, 200];
+  const red        = [200, 60, 0];
+  const purple      = [120, 0, 160];
+  const neutralA = [40, 40, 40];
+  const neutralB = [60, 60, 60];
+  const warm     = [200, 120, 40];
+  const blueAccent = [0, 0, 255]; // blue accent
+  const purpleAccent = [255, 0, 255]; // purple accent
 
   switch (page) {
     case 5: // reverse loop page: warm palette (red-shift allusion)
@@ -3709,7 +3732,15 @@ LaunchpadProMK3.applyLinearGradientToSpecificPads = function (deck, pads, startR
     const pad = pads[i];
     if (!pad) { continue; }
     let rgb = grad[i] || endRgb;
-    if (deckLoaded !== 1) { rgb = LaunchpadProMK3.darkenRGBColour(rgb, LaunchpadProMK3.deckUnloadedDimscale); }
+    if (deckLoaded !== 1) {
+      let dimRatio = LaunchpadProMK3.deckUnloadedDimscale;
+      try {
+        if (LaunchpadProMK3.currentPage === 1 && deck === (LaunchpadProMK3.oneDeckCurrent || 1)) {
+          dimRatio = LaunchpadProMK3.oneDeckUnloadedDimscale;
+        }
+      } catch (e) {}
+      rgb = LaunchpadProMK3.darkenRGBColour(rgb, dimRatio);
+    }
     LaunchpadProMK3.sendRGB(pad, rgb[0], rgb[1], rgb[2]);
   }
 };
@@ -3734,7 +3765,15 @@ LaunchpadProMK3.applySplitGradientToSpecificPads = function (deck, pads, gradSta
     const pad = pads[i];
     if (!pad) { continue; }
     let rgb = (i < half) ? (gradA[i] || gradEndA) : (gradB[i - half] || gradEndB);
-    if (deckLoaded !== 1) { rgb = LaunchpadProMK3.darkenRGBColour(rgb, LaunchpadProMK3.deckUnloadedDimscale); }
+    if (deckLoaded !== 1) {
+      let dimRatio = LaunchpadProMK3.deckUnloadedDimscale;
+      try {
+        if (LaunchpadProMK3.currentPage === 1 && deck === (LaunchpadProMK3.oneDeckCurrent || 1)) {
+          dimRatio = LaunchpadProMK3.oneDeckUnloadedDimscale;
+        }
+      } catch (e) {}
+      rgb = LaunchpadProMK3.darkenRGBColour(rgb, dimRatio);
+    }
     LaunchpadProMK3.sendRGB(pad, rgb[0], rgb[1], rgb[2]);
   }
 };
@@ -4510,15 +4549,16 @@ LaunchpadProMK3.updateOneDeckPage = function () {
       });
     };
 
-    // Right column: top 3 increase (incl double), bottom 3 decrease (incl halve); remove largest (±16)
+    // Right column: repaint as deck colour (dim if unloaded)
     const rightIncPads = rightLoopPads.slice(0, 3);
     const rightDecPads = rightLoopPads.slice(3, 6);
-    const decStart = [80, 127, 20];
-    const decBaseGrad = LaunchpadProMK3.buildHueRotatedLightnessGradient(decStart, rightDecPads.length, -3, 0.90, 0.60, 1.0);
-    const decPressGrad = decBaseGrad.map(rgb => LaunchpadProMK3.darkenRGBColour(rgb, 0.75));
-    const incStart = [20, 127, 110];
-    const incBaseGrad = LaunchpadProMK3.buildHueRotatedLightnessGradient(incStart, rightIncPads.length, +3, 0.90, 0.60, 1.0);
-    const incPressGrad = incBaseGrad.map(rgb => LaunchpadProMK3.darkenRGBColour(rgb, 0.75));
+    const _ch = `[Channel${selectedDeck}]`;
+    const _loaded = engine.getValue(_ch, "track_loaded");
+    const sideBaseRgb = (_loaded === 1) ? deckRgb : LaunchpadProMK3.darkenRGBColour(deckRgb, LaunchpadProMK3.oneDeckUnloadedDimscale);
+    const decBaseGrad = rightDecPads.map(() => sideBaseRgb);
+    const decPressGrad = rightDecPads.map(() => LaunchpadProMK3.darkenRGBColour(sideBaseRgb, 0.75));
+    const incBaseGrad = rightIncPads.map(() => sideBaseRgb);
+    const incPressGrad = rightIncPads.map(() => LaunchpadProMK3.darkenRGBColour(sideBaseRgb, 0.75));
     // Emphasize center-adjacent ops
     // Decrease group (bottom): nearest center is index 0 -> Halve (vivid lime)
     if (rightDecPads.length >= 1) {
@@ -4545,17 +4585,13 @@ LaunchpadProMK3.updateOneDeckPage = function () {
       else wireRightPad(pad, incPressGrad[i], incBaseGrad[i], (group) => adjustLoopSizeBy(group, +8));
     }
 
-    // Left column: dynamic loop move using current beatloop_size
-    // Top 3 = forward, Bottom 3 = backward (vertical reversed)
-    // Center pair (pads 3 & 4) = 1x loop length; next outward pair = 4x; outermost pair = 8x
+    // Left column: repaint as deck colour (dim if unloaded), handlers unchanged
     const fwdPads = leftLoopPads.slice(0, 3);
     const backPads = leftLoopPads.slice(3, 6);
-    const backBaseStart = [220, 50, 40];
-    const backBaseGrad = LaunchpadProMK3.buildHueRotatedLightnessGradient(backBaseStart, backPads.length, -4, 0.78, 0.48, 1.0);
-    const backPressGrad = backBaseGrad.map(rgb => LaunchpadProMK3.darkenRGBColour(rgb, 0.75));
-    const fwdBaseStart = [40, 80, 220];
-    const fwdBaseGrad = LaunchpadProMK3.buildHueRotatedLightnessGradient(fwdBaseStart, fwdPads.length, +4, 0.78, 0.48, 1.0);
-    const fwdPressGrad = fwdBaseGrad.map(rgb => LaunchpadProMK3.darkenRGBColour(rgb, 0.75));
+    const backBaseGrad = backPads.map(() => sideBaseRgb);
+    const backPressGrad = backPads.map(rgb => LaunchpadProMK3.darkenRGBColour(sideBaseRgb, 0.75));
+    const fwdBaseGrad = fwdPads.map(() => sideBaseRgb);
+    const fwdPressGrad = fwdPads.map(rgb => LaunchpadProMK3.darkenRGBColour(sideBaseRgb, 0.75));
     // Paint base
     for (let i = 0; i < backPads.length; i++) {
       const pad = backPads[i];
@@ -4615,7 +4651,7 @@ LaunchpadProMK3.updateOneDeckPage = function () {
       });
     }
 
-    // Bottom two pads per side: intro/outro markers near hotcue rows
+    // Bottom two pads per side: intro/outro markers near hotcue rows; paint as deck colour
     const selectedDeckGroup = `[Channel${selectedDeck}]`;
     const markerMapping = [
       { pad: leftMarkerPads[0], control: "intro_start_" },
@@ -4625,12 +4661,9 @@ LaunchpadProMK3.updateOneDeckPage = function () {
     ];
     const paintMarkerPad = (pad, controlBase) => {
       if (pad === undefined) return;
-      const enabled = engine.getValue(selectedDeckGroup, `${controlBase}enabled`);
-      if (enabled) {
-        LaunchpadProMK3.sendRGB(pad, 0x00, 0x00, 0xFF);
-      } else {
-        LaunchpadProMK3.sendRGB(pad, 0x00, 0x00, 0x00);
-      }
+      const _ld = engine.getValue(selectedDeckGroup, "track_loaded");
+      const base = (_ld === 1) ? deckRgb : LaunchpadProMK3.darkenRGBColour(deckRgb, LaunchpadProMK3.oneDeckUnloadedDimscale);
+      LaunchpadProMK3.sendRGB(pad, base[0], base[1], base[2]);
     };
     const wireMarkerPad = (pad, controlBase) => {
       if (pad === undefined) return;
@@ -4863,7 +4896,13 @@ LaunchpadProMK3.setupOneDeckBeatjumpLighting = function(selectedDeck) {
       
       // Adjust brightness based on deck loaded status
       if (deckLoaded !== 1) {
-        toSend = LaunchpadProMK3.darkenRGBColour(toSend, LaunchpadProMK3.deckUnloadedDimscale);
+        let dimRatio = LaunchpadProMK3.deckUnloadedDimscale;
+        try {
+          if (LaunchpadProMK3.currentPage === 1 && selectedDeck === (LaunchpadProMK3.oneDeckCurrent || 1)) {
+            dimRatio = LaunchpadProMK3.oneDeckUnloadedDimscale;
+          }
+        } catch (e) {}
+        toSend = LaunchpadProMK3.darkenRGBColour(toSend, dimRatio);
       }
       
       const [r, g, b] = toSend;
@@ -5773,8 +5812,14 @@ LaunchpadProMK3.setupSelectedDeckHotcues = function(selectedDeck) {
       let padRgb;
       
       if (deckLoaded !== 1) {
-        // Track not loaded - use deck color with unloaded brightness
-        padRgb = LaunchpadProMK3.darkenRGBColour(deckRgb, LaunchpadProMK3.deckUnloadedDimscale);
+        // Track not loaded - on page 1 show bright deck colour (page-specific dimscale)
+        let dimRatio = LaunchpadProMK3.deckUnloadedDimscale;
+        try {
+          if (LaunchpadProMK3.currentPage === 1 && selectedDeck === (LaunchpadProMK3.oneDeckCurrent || 1)) {
+            dimRatio = LaunchpadProMK3.oneDeckUnloadedDimscale;
+          }
+        } catch (e) {}
+        padRgb = LaunchpadProMK3.darkenRGBColour(deckRgb, dimRatio);
       } else if (actualHotcueNum > 0 && actualHotcueNum <= LaunchpadProMK3.totalDeckHotcueButtons) {
         // Track loaded and valid hotcue number - check if hotcue is enabled
         const hotcueEnabled = engine.getValue(channel, `hotcue_${actualHotcueNum}_status`);
