@@ -466,7 +466,7 @@ LaunchpadProMK3.initVars = function () {
   LaunchpadProMK3.deckUnloadedDimscale = 0.2       // Dim for unloaded decks
   // One-deck page specific brightness for the selected deck when unloaded
   // Lower this so unloaded looks clearly dimmer than loaded (ratio^2)
-  LaunchpadProMK3.oneDeckUnloadedDimscale = 0.85
+  LaunchpadProMK3.oneDeckUnloadedDimscale = 0.39
 
   // Brightness/contrast control variables for dimmed pads
   // Controls the visual feedback for loaded vs unloaded decks
@@ -4559,16 +4559,18 @@ LaunchpadProMK3.updateOneDeckPage = function () {
     const decPressGrad = rightDecPads.map(() => LaunchpadProMK3.darkenRGBColour(sideBaseRgb, 0.75));
     const incBaseGrad = rightIncPads.map(() => sideBaseRgb);
     const incPressGrad = rightIncPads.map(() => LaunchpadProMK3.darkenRGBColour(sideBaseRgb, 0.75));
-    // Emphasize center-adjacent ops
-    // Decrease group (bottom): nearest center is index 0 -> Halve (vivid lime)
-    if (rightDecPads.length >= 1) {
-      decBaseGrad[0] = [96, 127, 12];
-      decPressGrad[0] = LaunchpadProMK3.darkenRGBColour(decBaseGrad[0], 0.75);
-    }
-    // Increase group (top): nearest center is index 2 -> Double (vivid aqua)
-    if (rightIncPads.length >= 3) {
-      incBaseGrad[2] = [10, 127, 120];
-      incPressGrad[2] = LaunchpadProMK3.darkenRGBColour(incBaseGrad[2], 0.75);
+    // Emphasize center-adjacent ops only when deck is loaded (keep uniform deck colour when unloaded)
+    if (_loaded === 1) {
+      // Decrease group (bottom): nearest center is index 0 -> Halve (vivid lime)
+      if (rightDecPads.length >= 1) {
+        decBaseGrad[0] = [96, 127, 12];
+        decPressGrad[0] = LaunchpadProMK3.darkenRGBColour(decBaseGrad[0], 0.75);
+      }
+      // Increase group (top): nearest center is index 2 -> Double (vivid aqua)
+      if (rightIncPads.length >= 3) {
+        incBaseGrad[2] = [10, 127, 120];
+        incPressGrad[2] = LaunchpadProMK3.darkenRGBColour(incBaseGrad[2], 0.75);
+      }
     }
     // Wire dec (bottom): Halve, -4, -8 (top->bottom within bottom trio)
     for (let i = 0; i < rightDecPads.length; i++) {
