@@ -4898,8 +4898,22 @@ LaunchpadProMK3.updateOneDeckPage = function () {
     const paintMarkerPad = (pad, controlBase) => {
       if (pad === undefined) return;
       const _ld = engine.getValue(selectedDeckGroup, "track_loaded");
-      const base = (_ld === 1) ? deckRgb : LaunchpadProMK3.darkenRGBColour(deckRgb, LaunchpadProMK3.oneDeckUnloadedDimscale);
-      LaunchpadProMK3.sendRGB(pad, base[0], base[1], base[2]);
+      
+      if (_ld === 1) {
+        // track loaded - check if marker is set and use appropriate colors
+        const markerSet = engine.getValue(selectedDeckGroup, `${controlBase}enabled`);
+        if (markerSet === 1) {
+          // marker is set - use full blue like trackWithIntroOutro
+          LaunchpadProMK3.sendRGB(pad, 0x00, 0x00, 0xFF);
+        } else {
+          // no marker set - use black to indicate available
+          LaunchpadProMK3.sendRGB(pad, 0x00, 0x00, 0x00);
+        }
+      } else {
+        // track not loaded - use dimmed deck color
+        const base = LaunchpadProMK3.darkenRGBColour(deckRgb, LaunchpadProMK3.oneDeckUnloadedDimscale);
+        LaunchpadProMK3.sendRGB(pad, base[0], base[1], base[2]);
+      }
     };
     const wireMarkerPad = (pad, controlBase) => {
       if (pad === undefined) return;
