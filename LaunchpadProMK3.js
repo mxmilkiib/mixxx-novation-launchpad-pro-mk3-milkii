@@ -88,6 +88,212 @@
 // [done 2025-08-23] Cleanup selectPage + shutdown: timers, engine connections, MIDI handlers
 // [done] clear all hotcues functionality with undo support
 
+/*
+ * SCRIPT STRUCTURE OUTLINE
+ * ========================
+ * 
+ * • global constants and configuration
+ *   - COLOURS: colour definitions for pads and LEDs
+ *   - C: shorthand colour mappings
+ *   - DEBUG: debug logging function
+ *   - leadupCues: predefined cue point configurations
+ * 
+ * • LaunchpadProMK3 (main controller object)
+ *   - core initialization functions
+ *     • init(): main initialization entry point
+ *     • initProgrammerMode(): sets up programmer mode
+ *     • initVars(): initializes controller variables and state
+ *     • initExtras(): additional initialization (slip mode, page handlers, etc.)
+ *     • initMidiHandlers(): sets up MIDI input handlers
+ * 
+ *   - utility functions
+ *     • sendSysEx(): sends system exclusive MIDI messages
+ *     • sleep(): timing utility
+ *     • _rand7(): random number generator
+ *     • getDeckFromOrder(): maps deck order to deck number
+ * 
+ *   - LED and visual control functions
+ *     • sendRGB(): sends RGB colour to specific pad
+ *     • sendHEX(): sends hex colour to pad
+ *     • hexToRGB(): converts hex to RGB values
+ *     • clearMain(): clears main grid
+ *     • clearAll(): clears all pads and LEDs
+ *     • clearPageMidiHandlers(): clears page-specific MIDI handlers
+ * 
+ *   - page management functions
+ *     • selectPage(): switches between different controller pages
+ *     • refreshCurrentPage(): refreshes current page display
+ *     • updateOneDeckModeButtons(): updates one-deck mode controls
+ *     • handlePageButtonPress(): processes page button interactions
+ * 
+ *   - row 0 control functions (top row interface)
+ *     • updateRow0LoopModeSwitch(): updates loop mode switch display
+ *     • setupRow0LoopModeSwitch(): configures loop mode switch
+ *     • updateRow0SelectedDeckSwatch(): updates selected deck indicator
+ * 
+ *   - brightness and display functions
+ *     • decreaseDimBrightness(): decreases LED brightness
+ *     • increaseDimBrightness(): increases LED brightness
+ * 
+ *   - hotcue management functions
+ *     • cycleHotcueBank(): cycles through hotcue banks for single deck
+ *     • cycleHotcueBankAllDecks(): cycles hotcue banks for all decks
+ *     • updateHotcueLights(): updates hotcue LED states
+ *     • updateHotcuePage(): refreshes hotcue page display
+ *     • updateHotcuePages(): updates hotcue pages for specific deck
+ *     • updateHotcueBankLights(): updates hotcue bank indicators
+ *     • setupSelectedDeckHotcues(): configures hotcue display for selected deck
+ *     • undoLastHotcue(): undoes last hotcue action
+ *     • redoLastHotcue(): redoes last hotcue action
+ *     • clearAllHotcues(): clears all hotcues for deck
+ *     • create4LeadupDropHotcues(): creates automatic drop cues
+ *     • getDeckBank(): gets current hotcue bank for deck
+ *     • hotcueNumForGridIndex(): maps grid position to hotcue number
+ *     • hotcueNumForHotcueIndex(): maps hotcue index to number
+ * 
+ *   - loop control functions
+ *     • buildLoopControlName(): builds control names for loop functions
+ *     • handleLoopControl(): processes loop control interactions
+ *     • updateLoopPage(): updates loop page display
+ *     • updateReverseLoopPage(): updates reverse loop page
+ *     • updateLoopMovePage(): updates loop move page
+ *     • updateLoopResizePage(): updates loop resize page
+ *     • updateOneDeckLoopLighting(): updates one-deck loop lighting
+ *     • requestLoopLEDRefresh(): requests loop LED refresh
+ *     • updateLoopPagesActiveOverlay(): updates loop page overlays
+ *     • clearAllLoopsAndRolls(): clears all active loops and rolls
+ * 
+ *   - beatjump and tempo functions
+ *     • setupOneDeckBeatjumpLighting(): configures beatjump lighting
+ *     • updateBeatjumpPage(): updates beatjump page display
+ *     • setupBeatjumpFlashing(): sets up beatjump beat flashing
+ *     • cleanupBeatjumpFlashing(): cleans up beatjump connections
+ *     • bpmResetToDeck(): resets BPM to deck tempo
+ *     • bpmResetToBpm(): resets BPM to specific value
+ *     • updateBpmScalePage(): updates BPM scale page
+ *     • isScaledBeatActive(): checks if scaled beat is active
+ *     • setupScaledBeatConnections(): sets up scaled beat connections
+ *     • cleanupScaledBeatConnections(): cleans up scaled beat connections
+ * 
+ *   - deck management functions
+ *     • setupOneDeckRow1DeckButtons(): configures deck selection buttons
+ *     • updateOneDeckPage(): updates one-deck page display
+ *     • sidepadDeckColour(): gets colour for deck sidepads
+ *     • setupPage0SidepadFlashing(): sets up sidepad beat flashing
+ *     • cleanupPage0SidepadFlashing(): cleans up sidepad connections
+ *     • setupSidepadBeatFlashing(): sets up sidepad beat indicators
+ *     • cleanupSidepadBeatFlashing(): cleans up sidepad beat connections
+ * 
+ *   - animation system functions
+ *     • page8Handler(): handles animation page 8
+ *     • page9Handler(): handles animation page 9
+ *     • bindAnimationRow0Controls(): binds animation control row
+ * 
+ *   - slip mode functions
+ *     • refreshSlipLed(): refreshes slip mode LED
+ *     • setSlipEnabled(): enables/disables slip mode
+ *     • updateSlipStateFromEngine(): updates slip state from mixxx engine
+ * 
+ *   - split cue functions
+ *     • toggleSplitCue(): toggles split cue functionality
+ *     • toggleSplitCueUnVol(): toggles split cue with volume
+ * 
+ *   - effect functions
+ *     • enableAllEffects(): enables all effects
+ *     • toggleReverseRoll(): toggles reverse roll effect
+ * 
+ *   - gradient and colour functions
+ *     • gradientSetup(): sets up colour gradients
+ *     • getLoopGradientPalette(): gets gradient palette for loops
+ *     • gradientCalculate(): calculates gradient between colours
+ *     • rgbToHsl(): converts RGB to HSL colour space
+ *     • hslToRgb(): converts HSL to RGB colour space
+ *     • hueRotateRGB(): rotates hue of RGB colour
+ *     • lightenRGBColour(): lightens RGB colour
+ *     • darkenRGBColour(): darkens RGB colour
+ *     • mixRGB(): mixes two RGB colours
+ *     • buildHueRotatedLightnessGradient(): builds hue-rotated gradients
+ *     • getMainGridPadAddressesForRows(): gets pad addresses for rows
+ *     • applyLinearGradientToSpecificPads(): applies linear gradients to pads
+ *     • applySplitGradientToSpecificPads(): applies split gradients to pads
+ * 
+ *   - timer and connection management
+ *     • clearBeatConnections(): clears beat-related engine connections
+ *     • cancelAllHotcueSequenceTimers(): cancels all hotcue sequence timers
+ *     • cancelLoopVerifyTimer(): cancels loop verification timer
+ *     • cancelHotcueSequenceTimer(): cancels specific hotcue sequence timer
+ * 
+ *   - track and intro/outro functions
+ *     • trackWithIntroOutro(): handles track intro/outro detection
+ *     • lightUpRow2(): lights up row 2 for track sections
+ * 
+ *   - utility and helper functions
+ *     • resetKeepPlayingMode(): resets keep playing mode
+ *     • printReadme(): prints controller information
+ *     • shutdown(): cleanup function for controller shutdown
+ * 
+ *   - Deck constructor function
+ *     • Deck(): constructor for individual deck objects
+ *       - properties: deckNum, group, hotcueBank, etc.
+ *       - methods: sendRGB() for deck-specific RGB control
+ *       - engine connections for track_loaded, bpm, play, loop states
+ *       - component reconnection functionality
+ * 
+ * • animation system objects
+ *   - animation controller object
+ *     • init(): initializes animation system
+ *     • startAnimation(): starts animation loop
+ *     • stopAnimation(): stops animation loop
+ *     • animationLoop(): main animation loop function
+ *     • updateAnimation(): updates current animation frame
+ *     • nextAnimation(): switches to next animation
+ *     • prevAnimation(): switches to previous animation
+ *     • toggleAutoHue(): toggles automatic hue cycling
+ *     • updateHue(): updates hue value
+ *     • updatePageIndicator(): updates page indicator display
+ *     • animation pattern functions:
+ *       - rainbowWave(): creates rainbow wave pattern
+ *       - pulsingGrid(): creates pulsing grid pattern
+ *       - colorSpiral(): creates spiral colour pattern
+ *       - scanLines(): creates scanning line pattern
+ *     • hsvToRgb(): HSV to RGB conversion for animations
+ * 
+ *   - visual effects renderer object
+ *     • clamp(): clamps values to range
+ *     • hsvToRgb255(): HSV to RGB conversion (0-255 range)
+ *     • sendPad(): sends colour to specific pad
+ *     • clearGrid(): clears the pad grid
+ *     • setPage(): sets current page
+ *     • bindControls(): binds control handlers
+ *     • control functions:
+ *       - toggleAutoHue(): toggles auto hue mode
+ *       - updateHue(): updates hue value
+ *       - adjustSpeed(): adjusts animation speed
+ *       - nextVariant()/prevVariant(): changes animation variants
+ *       - togglePulseMode(): toggles pulse mode
+ *       - nextStyle()/prevStyle(): changes visual styles
+ *     • paintControlRow(): paints control row indicators
+ *     • currentStyles(): gets current style array
+ *     • render(): main render function
+ *     • hueBase(): gets base hue value
+ *     • pattern drawing functions:
+ *       - drawRings(): draws ring patterns
+ *       - drawDiag(): draws diagonal patterns
+ *       - drawChecker(): draws checkerboard patterns
+ *       - drawLattice(): draws lattice patterns
+ *       - drawSpiral(): draws spiral patterns
+ *       - drawRider(): draws rider patterns
+ *       - drawRadial(): draws radial patterns
+ *       - drawVortex(): draws vortex patterns
+ *     • setupBeatConnections(): sets up beat-synced connections
+ *     • cleanupBeatConnections(): cleans up beat connections
+ * 
+ * • utility functions (global scope)
+ *   - isCloseEnough(): checks if number is close to array values
+ */
+
+
+
 
 
 //// MARK: LaunchpadProMK3
@@ -4260,15 +4466,37 @@ LaunchpadProMK3.clearAllHotcues = function (deckNum) {
 // Create a sequence of hotcues for DJ mixing: 4 leadup + drop + 3 outro
 // Each hotcue is positioned at specific beat intervals for smooth transitions
 var leadupCues = {
-  "1": { control: "beatjump_256_backward", colour: 0x006838  }, // -265, dark green
-  "2": { control: "beatjump_64_forward", colour: 0x006838  },   // -192, dark green
-  "3": { control: "beatjump_64_forward", colour: 0x006838  },   // -128, dark green
-  "4": { control: "beatjump_64_forward", colour: 0x006838  },   // -64,  dark green
-  "5": { control: "beatjump_32_forward", colour: 0xff8000 },    // -32,  orange
-  "6": { control: "beatjump_16_forward", colour: 0xff8000 },    // -16,  orange
-  "7": { control: "beatjump_16_forward", colour: 0xc71136 },    // drop, red
-  "8": { control: "beatjump_128_forward", colour: 0x5C3F97 },   // +128, purple
+  "1": { control: "beatjump_256_backward", colour: 0x006838, label: "-265" }, // -265, dark green
+  "2": { control: "beatjump_64_forward", colour: 0x006838, label: "-192" },   // -192, dark green
+  "3": { control: "beatjump_64_forward", colour: 0x006838, label: "-128" },   // -128, dark green
+  "4": { control: "beatjump_64_forward", colour: 0x006838, label: "-64" },   // -64,  dark green
+  "5": { control: "beatjump_32_forward", colour: 0xff8000, label: "-32" },    // -32,  orange
+  "6": { control: "beatjump_16_forward", colour: 0xff8000, label: "-16" },    // -16,  orange
+  "7": { control: "beatjump_16_forward", colour: 0xc71136, label: "DROP" },    // drop, red
+  "8": { control: "beatjump_128_forward", colour: 0x5C3F97, label: "+128" },   // +128, purple
 }
+
+// Helper function to set hotcue label using new UTF-8 string controls
+LaunchpadProMK3.setHotcueLabel = function(group, hotcueNumber, labelText) {
+  try {
+    const labelControl = "hotcue_" + hotcueNumber + "_label_text";
+    engine.setStringValue(group, labelControl, labelText);
+    print("LaunchpadProMK3: Set hotcue " + hotcueNumber + " label to: " + labelText);
+  } catch (e) {
+    print("LaunchpadProMK3: Error setting hotcue label: " + e);
+  }
+};
+
+// Helper function to get hotcue label using new UTF-8 string controls
+LaunchpadProMK3.getHotcueLabel = function(group, hotcueNumber) {
+  try {
+    const labelControl = "hotcue_" + hotcueNumber + "_label_text";
+    return engine.getStringValue(group, labelControl);
+  } catch (e) {
+    print("LaunchpadProMK3: Error getting hotcue label: " + e);
+    return "";
+  }
+};
 
 
 function isCloseEnough(array, num, precision = 2) {
@@ -4398,6 +4626,12 @@ LaunchpadProMK3.create4LeadupDropHotcues = function (deck, value) {
             engine.setValue(group, hotcueSpaceTitle + "_set", 1);
             // give that hotcue its colour
             engine.setValue(group, hotcueSpaceTitle + "_color", colour);
+            // set the hotcue label using new string controls
+            const hotcueNum = hotcueSpace + 1;
+            const leadupCueKey = (idx + 1).toString();
+            if (leadupCues[leadupCueKey] && leadupCues[leadupCueKey].label) {
+              LaunchpadProMK3.setHotcueLabel(group, hotcueNum, leadupCues[leadupCueKey].label);
+            }
             // what is its pad?
             DEBUG("create4LeadupDropHotcues: LaunchpadProMK3.decks[deck].deckMainSliceStartIndex " + C.O + LaunchpadProMK3.decks[deck].deckMainSliceStartIndex);
             const pad = LaunchpadProMK3.decks[deck].deckMainSliceStartIndex + hotcueSpace;
