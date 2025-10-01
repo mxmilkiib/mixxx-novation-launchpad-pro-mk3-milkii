@@ -4766,10 +4766,10 @@ LaunchpadProMK3.clearMain = function () {
   for (let i = 0; i < mainpadAddresses.length; i++) {
     const address = mainpadAddresses[i];
     if (address) {
-      colorSpecMulti = colorSpecMulti.concat([0x03, address, 0, 0, 0]);
+      colorSpecMulti.push(0x03, address, 0, 0, 0);
     }
   }
-  LaunchpadProMK3.sendSysEx([0x03].concat(colorSpecMulti));
+  LaunchpadProMK3.sendSysEx([0x03, ...colorSpecMulti]);
   
   //// sidepads
   let colorSpecMultiSide = [];
@@ -4780,10 +4780,10 @@ LaunchpadProMK3.clearMain = function () {
   for (let i = 0; i < sidepads.length; i++) {
     const address = sidepads[i];
     if (address) {
-      colorSpecMultiSide = colorSpecMultiSide.concat([0x03, address, 0, 0, 0]);
+      colorSpecMultiSide.push(0x03, address, 0, 0, 0);
     }
   }
-  LaunchpadProMK3.sendSysEx([0x03].concat(colorSpecMultiSide));
+  LaunchpadProMK3.sendSysEx([0x03, ...colorSpecMultiSide]);
   
   LOG.debug("clearMain: /// end clearing ALL main and side pads", C.R);
 };
@@ -4798,11 +4798,11 @@ LaunchpadProMK3.clearAll = function () {
   let ca = [0x03]; 
   let cb = [0x03];
   for (let i = 0; i <= 0x3F; i += 1) { 
-    ca = ca.concat([0x03, i, 0, 0, 0]); 
+    ca.push(0x03, i, 0, 0, 0); 
   } 
   LaunchpadProMK3.sendSysEx(ca);
   for (let i = 0x40; i <= 0x7F; i += 1) { 
-    cb = cb.concat([0x03, i, 0, 0, 0]); 
+    cb.push(0x03, i, 0, 0, 0); 
   } 
   LaunchpadProMK3.sendSysEx(cb);
   LOG.debug("/// end clearing all pads", C.R);
@@ -5041,10 +5041,10 @@ LaunchpadProMK3.updateHotcueLights = function (deckNum) {
     _r = Math.max(0, Math.min(127, _r));
     _g = Math.max(0, Math.min(127, _g));
     _b = Math.max(0, Math.min(127, _b));
-    colourSpecMulti = colourSpecMulti.concat([0x03, padAddress, _r, _g, _b]);
+    colourSpecMulti.push(0x03, padAddress, _r, _g, _b);
     LOG.debug(colourSpecMulti)
     LOG.debug("updateHotcueLights(" + C.O + deckNum + C.O + "): finished creating pad address sysex msg, sending...", C.O);
-    LaunchpadProMK3.sendSysEx([0x03].concat(colourSpecMulti));
+    LaunchpadProMK3.sendSysEx([0x03, ...colourSpecMulti]);
     colourSpecMulti = [];
   }
 
