@@ -696,14 +696,34 @@ const LOG = {
   }
 };
 
-// backward-compatible DEBUG function (maps to LOG.debug)
+/**
+ * backward-compatible DEBUG function with lazy evaluation optimization
+ * 
+ * performance optimization: accepts either a string or a function that returns a string.
+ * when debugging is disabled, function form avoids expensive string concatenation.
+ * 
+ * usage:
+ *   DEBUG("simple message", C.G);                    // always builds string (old style, still works)
+ *   DEBUG(() => "lazy " + expensive + " calc", C.G); // only builds string when debugging enabled (optimized)
+ * 
+ * @param {string|function} message - debug message or function returning message
+ * @param {string} colour - ANSI color code
+ * @param {number} linesbefore - blank lines before message
+ * @param {number} linesafter - blank lines after message
+ * @returns {void}
+ */
 const DEBUG = function (message, colour, linesbefore, linesafter) {
+  // early return before any processing if debugging disabled
   if (!LaunchpadProMK3.DEBUGstate) return;
+  
+  // lazy evaluation: if message is a function, call it now
+  const resolvedMessage = (typeof message === 'function') ? message() : message;
+  
   if (typeof linesbefore === "number" && linesbefore > 0 && linesbefore < TIMING.DEBUG_LINE_LIMIT) {
     for (let i = 0; i < linesbefore; i += 1) { print(" "); }
   }
   const timestamp = (Date.now() - LaunchpadProMK3.appStartTimestamp) / TIMING.MS_TO_SECONDS;
-  print(`${C.PR}DEBUG ${C.GR}${timestamp.toFixed(3)}${C.RE} ${colour || ""}${message}${C.RE}`);
+  print(`${C.PR}DEBUG ${C.GR}${timestamp.toFixed(3)}${C.RE} ${colour || ""}${resolvedMessage}${C.RE}`);
   if (typeof linesafter === "number" && linesafter > 0 && linesafter < TIMING.DEBUG_LINE_LIMIT) {
     for (let i = 0; i < linesafter; i += 1) { print(" "); }
   }
@@ -4892,12 +4912,12 @@ LaunchpadProMK3.shutdown = function () {
  */
 LaunchpadProMK3.selectPage = function (page) {
   // find target page if none provided
-  DEBUG("selectPage(" + C.O + page + C.G + ")", C.G, 25);
+  DEBUG(() => "selectPage(" + C.O + page + C.G + ")", C.G, 25);
   if (page === undefined) {
     page = (+LaunchpadProMK3.currentPage + 1) % LaunchpadProMK3.totalPages;
-    DEBUG("selectPage: page undefined, selectPage setting page to next page    " + C.M + page, C.O);
+    DEBUG(() => "selectPage: page undefined, selectPage setting page to next page    " + C.M + page, C.O);
   }
-  DEBUG("selectPage: switching page from " + C.M + LaunchpadProMK3.currentPage + C.O + " to " + C.M + page, C.O);
+  DEBUG(() => "selectPage: switching page from " + C.M + LaunchpadProMK3.currentPage + C.O + " to " + C.M + page, C.O);
   LaunchpadProMK3.currentPage = page;
   LaunchpadProMK3.updateRow0SelectedDeckSwatch();
   
@@ -4938,10 +4958,10 @@ DEBUG("########### selectPage before if: page " + C.O + page, C.R);
   // use page metadata to call appropriate update function
   const pageMeta = LaunchpadProMK3.pageMetadata[page];
   if (pageMeta && pageMeta.updateFn) {
-    DEBUG("selectPage: calling update for page " + C.O + page + C.G + " (" + pageMeta.name + ")", C.G);
+    DEBUG(() => "selectPage: calling update for page " + C.O + page + C.G + " (" + pageMeta.name + ")", C.G);
     pageMeta.updateFn();
   } else {
-    DEBUG("selectPage: no update function for page " + C.O + page, C.Y);
+    DEBUG(() => "selectPage: no update function for page " + C.O + page, C.Y);
   }
   // Page 10-11 reserved for custom functionality
   DEBUG("selectPage: resetting bottom row deck selection buttons for new page..", C.O)
@@ -4957,7 +4977,7 @@ DEBUG("########### selectPage before if: page " + C.O + page, C.R);
     LaunchpadProMK3.restoreRow0Colors();
   }
   
-  DEBUG("selectPage: leaving selectPage(" + C.O + page + C.R + ")", C.R, 0, 20)
+  DEBUG(() => "selectPage: leaving selectPage(" + C.O + page + C.R + ")", C.R, 0, 20)
 };
 
 
@@ -5004,11 +5024,11 @@ LaunchpadProMK3.updateHotcueLights = function (deckNum) {
           const hotcueColour = engine.getValue(channel, CONTROLS.hotcue(actualHotcueNum, "color"));
           // const debugHotcueEnabled = "   hotcueEnabled " + C.O + hotcueEnabled + C.RE + "   hotcueColour " + C.O + "#" + hotcueColour.toString(16).padStart(6, "0").toUpperCase(); // UNUSED VARIABLE
           padRgb = LaunchpadProMK3.dimForState(LaunchpadProMK3.hexToRGB(hotcueColour), 'active');
-          DEBUG("padRgb " + C.O + padRgb + C.RE)
+          DEBUG(() => "padRgb " + C.O + padRgb + C.RE)
         } else if (hotcueEnabled !== 1) {
           // deck loaded but no hotcue, set pad to deck colour, LoadedInactive
           padRgb = LaunchpadProMK3.dimForState(deckRgb, 'inactive');
-          DEBUG("  padRgb " + C.O + padRgb + C.RE)
+          DEBUG(() => "  padRgb " + C.O + padRgb + C.RE)
         }
       } else {
         // Invalid hotcue number (e.g., bank 3 beyond pad 4), turn off the pad
