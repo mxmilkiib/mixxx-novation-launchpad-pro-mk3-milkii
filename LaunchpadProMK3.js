@@ -317,9 +317,9 @@ LaunchpadProMK3.deck = LaunchpadProMK3.deck || {};
 
 
 
-/// logging system
+/// unified logging system
 // log levels: 0=OFF, 1=ERROR, 2=WARN, 3=INFO, 4=DEBUG, 5=TRACE
-LaunchpadProMK3.LOG_LEVEL = 3;  // default: INFO
+LaunchpadProMK3.LOG_LEVEL = 4;  // default: DEBUG (to match old DEBUGstate=1 behavior)
 
 // category-specific log levels (override global if set, null = use global)
 LaunchpadProMK3.LOG_CATEGORIES = {
@@ -331,8 +331,11 @@ LaunchpadProMK3.LOG_CATEGORIES = {
   timers: null          // timer operations
 };
 
-// deprecated flags (kept for compatibility, use LOG_LEVEL instead)
-LaunchpadProMK3.DEBUGstate = 1;
+// deprecated flags - now controlled by LOG_LEVEL
+// DEBUGstate: use LOG_LEVEL >= 4 instead
+// DEBUG_GRADIENTS: use LOG_CATEGORIES.gradients = 4 instead
+// DEBUG_GRADIENTS_VERBOSE: use LOG_CATEGORIES.gradients = 5 instead
+LaunchpadProMK3.DEBUGstate = 1;  // kept for any remaining checks, but DEBUG() now uses LOG_LEVEL
 LaunchpadProMK3.DEBUG_GRADIENTS = 0;
 LaunchpadProMK3.DEBUG_GRADIENTS_VERBOSE = 0;
 
@@ -655,8 +658,8 @@ LaunchpadProMK3.lastHotcueCreationTime = 0;
 // improved logging system with levels
 // MARK: LOG() functions
 const LOG = {
-  // internal helper
-  _log: function(level, levelName, colour, message, linesbefore, linesafter, category) {
+  // internal helper with lazy evaluation and custom color support
+  _log: function(level, levelName, defaultColour, message, linesbefore, linesafter, category, customColour) {
     // check category-specific level first, then global
     const effectiveLevel = (category && LaunchpadProMK3.LOG_CATEGORIES[category] !== null) 
       ? LaunchpadProMK3.LOG_CATEGORIES[category] 
@@ -664,69 +667,63 @@ const LOG = {
     
     if (level > effectiveLevel) return;
     
+    // lazy evaluation: if message is a function, call it now
+    const resolvedMessage = (typeof message === 'function') ? message() : message;
+    
+    // use custom color if provided, otherwise default for this level
+    const colour = customColour || defaultColour;
+    
     if (typeof linesbefore === "number" && linesbefore > 0 && linesbefore < TIMING.DEBUG_LINE_LIMIT) {
       for (let i = 0; i < linesbefore; i += 1) { print(" "); }
     }
     const timestamp = (Date.now() - LaunchpadProMK3.appStartTimestamp) / TIMING.MS_TO_SECONDS;
     const catStr = category ? `[${category}] ` : "";
-    print(`${C.GR}${timestamp.toFixed(3)}${C.RE} ${colour}${levelName}${C.RE} ${catStr}${colour}${message}${C.RE}`);
+    print(`${C.GR}${timestamp.toFixed(3)}${C.RE} ${colour}${levelName}${C.RE} ${catStr}${colour}${resolvedMessage}${C.RE}`);
     if (typeof linesafter === "number" && linesafter > 0 && linesafter < TIMING.DEBUG_LINE_LIMIT) {
       for (let i = 0; i < linesafter; i += 1) { print(" "); }
     }
   },
   
-  error: function(message, linesbefore, linesafter, category) {
-    this._log(1, "ERROR", C.R, message, linesbefore, linesafter, category);
+  error: function(message, linesbefore, linesafter, category, customColour) {
+    this._log(1, "ERROR", C.R, message, linesbefore, linesafter, category, customColour);
   },
   
-  warn: function(message, linesbefore, linesafter, category) {
-    this._log(2, "WARN ", C.Y, message, linesbefore, linesafter, category);
+  warn: function(message, linesbefore, linesafter, category, customColour) {
+    this._log(2, "WARN ", C.Y, message, linesbefore, linesafter, category, customColour);
   },
   
-  info: function(message, linesbefore, linesafter, category) {
-    this._log(3, "INFO ", C.G, message, linesbefore, linesafter, category);
+  info: function(message, linesbefore, linesafter, category, customColour) {
+    this._log(3, "INFO ", C.G, message, linesbefore, linesafter, category, customColour);
   },
   
-  debug: function(message, linesbefore, linesafter, category) {
-    this._log(4, "DEBUG", C.C, message, linesbefore, linesafter, category);
+  debug: function(message, linesbefore, linesafter, category, customColour) {
+    this._log(4, "DEBUG", C.C, message, linesbefore, linesafter, category, customColour);
   },
   
-  trace: function(message, linesbefore, linesafter, category) {
-    this._log(5, "TRACE", C.GR, message, linesbefore, linesafter, category);
+  trace: function(message, linesbefore, linesafter, category, customColour) {
+    this._log(5, "TRACE", C.GR, message, linesbefore, linesafter, category, customColour);
   }
 };
 
 /**
- * backward-compatible DEBUG function with lazy evaluation optimization
+ * backward-compatible DEBUG function - now redirects to LOG.debug
  * 
- * performance optimization: accepts either a string or a function that returns a string.
- * when debugging is disabled, function form avoids expensive string concatenation.
+ * DEPRECATED: use LOG.debug() directly for new code
+ * maintained for backward compatibility with existing 498 DEBUG() calls
  * 
- * usage:
- *   DEBUG("simple message", C.G);                    // always builds string (old style, still works)
- *   DEBUG(() => "lazy " + expensive + " calc", C.G); // only builds string when debugging enabled (optimized)
+ * migration: DEBUG(msg, colour, before, after) → LOG.debug(msg, before, after, null, colour)
  * 
  * @param {string|function} message - debug message or function returning message
- * @param {string} colour - ANSI color code
+ * @param {string} colour - ANSI color code (optional, passed as customColour to LOG)
  * @param {number} linesbefore - blank lines before message
  * @param {number} linesafter - blank lines after message
  * @returns {void}
+ * @deprecated use LOG.debug() instead
  */
 const DEBUG = function (message, colour, linesbefore, linesafter) {
-  // early return before any processing if debugging disabled
-  if (!LaunchpadProMK3.DEBUGstate) return;
-  
-  // lazy evaluation: if message is a function, call it now
-  const resolvedMessage = (typeof message === 'function') ? message() : message;
-  
-  if (typeof linesbefore === "number" && linesbefore > 0 && linesbefore < TIMING.DEBUG_LINE_LIMIT) {
-    for (let i = 0; i < linesbefore; i += 1) { print(" "); }
-  }
-  const timestamp = (Date.now() - LaunchpadProMK3.appStartTimestamp) / TIMING.MS_TO_SECONDS;
-  print(`${C.PR}DEBUG ${C.GR}${timestamp.toFixed(3)}${C.RE} ${colour || ""}${resolvedMessage}${C.RE}`);
-  if (typeof linesafter === "number" && linesafter > 0 && linesafter < TIMING.DEBUG_LINE_LIMIT) {
-    for (let i = 0; i < linesafter; i += 1) { print(" "); }
-  }
+  // redirect to LOG.debug with custom color support
+  // note: category is null, colour becomes customColour parameter
+  LOG.debug(message, linesbefore, linesafter, null, colour);
 };
 
 //const D = function(var1, var2, var3, var4, var5, var6) {
