@@ -951,6 +951,45 @@ LaunchpadProMK3.createDeckButtonHandler = function(buttonIndex, orderIndex, deck
 
 
 /**
+ * page metadata registry
+ * lightweight page handler system - maps page numbers to names and update functions
+ * @type {Object}
+ */
+LaunchpadProMK3.pageMetadata = {
+  0: { name: 'hotcues', updateFn: function() { LaunchpadProMK3.updateHotcuePage(); LaunchpadProMK3.updateHotcueBankLights(); LaunchpadProMK3.cleanupConnectionsForAllDecks(LaunchpadProMK3.setupPage0SidepadFlashing); } },
+  1: { name: 'onedeck', updateFn: function() { LaunchpadProMK3.updateOneDeckPage(); } },
+  2: { name: 'beatjump', updateFn: function() { LaunchpadProMK3.updateBeatjumpPage(); } },
+  3: { name: 'bpmscale', updateFn: function() { LaunchpadProMK3.updateBpmScalePage(); } },
+  4: { name: 'loop_forward', updateFn: function() { LaunchpadProMK3.updateLoopPage(); } },
+  5: { name: 'loop_reverse', updateFn: function() { LaunchpadProMK3.updateReverseLoopPage(); } },
+  6: { name: 'loop_move', updateFn: function() { LaunchpadProMK3.updateLoopMovePage(); } },
+  7: { name: 'loop_resize', updateFn: function() { LaunchpadProMK3.updateLoopResizePage(); } },
+  8: { name: 'animation_1', updateFn: function() { LaunchpadProMK3.page8Handler && LaunchpadProMK3.page8Handler(); } },
+  9: { name: 'animation_2', updateFn: function() { LaunchpadProMK3.page9Handler && LaunchpadProMK3.page9Handler(); } },
+  10: { name: 'reserved', updateFn: function() { /* reserved */ } },
+  11: { name: 'reserved', updateFn: function() { /* reserved */ } }
+};
+
+/**
+ * get current page metadata
+ * @returns {Object} page metadata {name, updateFn}
+ */
+LaunchpadProMK3.getCurrentPageInfo = function() {
+  return this.pageMetadata[this.currentPage] || { name: 'unknown', updateFn: function() {} };
+};
+
+/**
+ * get page name by number
+ * @param {number} pageNum - page number (0-11)
+ * @returns {string} page name
+ */
+LaunchpadProMK3.getPageName = function(pageNum) {
+  const meta = this.pageMetadata[pageNum];
+  return meta ? meta.name : 'unknown';
+};
+
+
+/**
  * initialize all controller variables and state
  * MARK: initVars()
  * called during init() to set up pad addresses, colors, and state objects
@@ -4896,41 +4935,15 @@ LaunchpadProMK3.selectPage = function (page) {
 DEBUG("########### selectPage before if: page " + C.O + page, C.R);
   // Slip mode is controlled by dedicated toggle; no changes on page switch
 
-  if (page === 0) {
-    LaunchpadProMK3.updateHotcuePage();
-    LaunchpadProMK3.updateHotcueBankLights(); // Ensure bank lights are shown when switching to page 0
-    DEBUG("########### selectPage inside if2: page " + C.O + page, C.R);
-    LaunchpadProMK3.cleanupConnectionsForAllDecks(LaunchpadProMK3.setupPage0SidepadFlashing);
+  // use page metadata to call appropriate update function
+  const pageMeta = LaunchpadProMK3.pageMetadata[page];
+  if (pageMeta && pageMeta.updateFn) {
+    DEBUG("selectPage: calling update for page " + C.O + page + C.G + " (" + pageMeta.name + ")", C.G);
+    pageMeta.updateFn();
+  } else {
+    DEBUG("selectPage: no update function for page " + C.O + page, C.Y);
   }
-  else if (page === 1) {
-    LaunchpadProMK3.updateOneDeckPage();
-  }
-  else if (page === 2) {
-    LaunchpadProMK3.updateBeatjumpPage();
-  }
-  else if (page === 3) {
-    LaunchpadProMK3.updateBpmScalePage();
-  }
-  else if (page === 4) {
-    LaunchpadProMK3.updateLoopPage();
-  }
-  // Pages 5-8 are loop tools and animations
-  else if (page === 5) {
-    LaunchpadProMK3.updateReverseLoopPage();
-  }
-  else if (page === 6) {
-    LaunchpadProMK3.updateLoopMovePage();
-  }
-  else if (page === 7) {
-    LaunchpadProMK3.updateLoopResizePage();
-  }
-  else if (page === 8) {
-    LaunchpadProMK3.page8Handler();
-  }
-  else if (page === 9) {
-    LaunchpadProMK3.page9Handler && LaunchpadProMK3.page9Handler();
-  }
-  // Page 10 removed; reserved for custom functionality
+  // Page 10-11 reserved for custom functionality
   DEBUG("selectPage: resetting bottom row deck selection buttons for new page..", C.O)
   LaunchpadProMK3.lightUpRow2()
   
