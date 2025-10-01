@@ -1493,11 +1493,11 @@ LaunchpadProMK3.updateRow0LoopModeSwitch = function () {
     LaunchpadProMK3.sendRGB(left, leftCol);
     LaunchpadProMK3.sendRGB(right, rightCol);
     LOG.debug(
-      "updateRow0LoopModeSwitch: p=" + p + " loopCtx=" + isLoopContext +
+      () => "updateRow0LoopModeSwitch: p=" + p + " loopCtx=" + isLoopContext +
       " exitOnReleaseLED(row0[5])=" + JSON.stringify(leftCol) +
       " rollLED(row0[6])=" + JSON.stringify(rightCol) +
       " isRoll=" + isRoll + " exitOnRelease=" + exitOnRelease,
-      C.Y
+      0, 0, null, C.Y
     );
   } catch (e) { DEBUG("updateRow0LoopModeSwitch exception: " + e, C.R); }
 };
@@ -4985,7 +4985,7 @@ LOG.debug("########### selectPage before if: page " + C.O + page, C.R);
 // update main and side pad lights for a specific deck
 // refreshes all visual indicators for hotcues and intro/outro markers
 LaunchpadProMK3.updateHotcueLights = function (deckNum) {
-  LOG.debug("updateHotcueLights(" + deckNum + "): deck.config[" + deckNum + "] " + JSON.stringify(LaunchpadProMK3.deck.config[deckNum]), 2, 0, null, C.G)
+  LOG.debug(() => "updateHotcueLights(" + deckNum + "): deck.config[" + deckNum + "] " + JSON.stringify(LaunchpadProMK3.deck.config[deckNum]), 2, 0, null, C.G)
   const channel = `[Channel${deckNum}]`
   const deckColour = LaunchpadProMK3.deck.config[deckNum].colour;
   const deckRgb = LaunchpadProMK3.hexToRGB(deckColour);
@@ -5101,8 +5101,8 @@ LaunchpadProMK3.updateHotcuePage = function (deck) {
     LOG.debug("LaunchpadProMK3.updateHotcuePage()", C.G);
     if (deck === undefined) {
       LOG.debug("updateHotcuePage(" + C.O + deck + C.O + "): deck undefined so updating all decks..", C.O);
-      LOG.debug("updateHotcuePage(" + C.O + deck + C.RE + "): LaunchpadProMK3.deck.config " + C.O + JSON.stringify(LaunchpadProMK3.deck.config));
-      LOG.debug("updateHotcuePage(" + C.O + deck + C.RE + "): LaunchpadProMK3.deck.config[deck] " + C.O + JSON.stringify(LaunchpadProMK3.deck.config[deck]));
+      LOG.debug(() => "updateHotcuePage(" + C.O + deck + C.RE + "): LaunchpadProMK3.deck.config " + C.O + JSON.stringify(LaunchpadProMK3.deck.config), 0, 0, null);
+      LOG.debug(() => "updateHotcuePage(" + C.O + deck + C.RE + "): LaunchpadProMK3.deck.config[deck] " + C.O + JSON.stringify(LaunchpadProMK3.deck.config[deck]), 0, 0, null);
       LaunchpadProMK3.updateHotcueLights(1);
       LaunchpadProMK3.updateHotcueLights(2);
       if (LaunchpadProMK3.totalDecks === 4) {
@@ -5112,7 +5112,7 @@ LaunchpadProMK3.updateHotcuePage = function (deck) {
       LOG.debug("updateHotcuePage: end updating decks", 0, 1, null, C.R);
     } else {
       LOG.debug("updateHotcuePage: ## updating deck " + C.O + deck, C.G);
-      LOG.debug("updateHotcuePage: deck " + C.O + JSON.stringify(deck));
+      LOG.debug(() => "updateHotcuePage: deck " + C.O + JSON.stringify(deck), 0, 0, null);
       LaunchpadProMK3.updateHotcueLights(deck);
       LOG.debug("updateHotcuePage: ### end updating deck", 0, 1, null, C.R);
     }
@@ -5331,7 +5331,7 @@ LaunchpadProMK3.create4LeadupDropHotcues = function (deck, value) {
   }
   LOG.debug("create4LeadupDropHotcues: hotcuePositions  creation " + C.O + hotcuePositions);
   // for each of the controls in the object;
-  LOG.debug("create4LeadupDropHotcues: leadupCues " + C.O + JSON.stringify(leadupCues));
+  LOG.debug(() => "create4LeadupDropHotcues: leadupCues " + C.O + JSON.stringify(leadupCues), 0, 0, null);
   // Non-blocking sequence runner to avoid busy-wait sleeps
   const steps = Object.entries(leadupCues);
   let idx = 0;
@@ -5358,7 +5358,7 @@ LaunchpadProMK3.create4LeadupDropHotcues = function (deck, value) {
     }
 
     const number = steps[idx];
-    LOG.debug(JSON.stringify(number));
+    LOG.debug(() => JSON.stringify(number), 0, 0, null);
     LOG.debug("number " + C.O + number[1].control);
     const control = number[1].control;
     const colour = number[1].colour;
